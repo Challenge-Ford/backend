@@ -10,6 +10,7 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
+	wrapperspb "google.golang.org/protobuf/types/known/wrapperspb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -23,16 +24,16 @@ const (
 )
 
 type VehicleResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	CustomerId    string                 `protobuf:"bytes,2,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
-	Vin           string                 `protobuf:"bytes,3,opt,name=vin,proto3" json:"vin,omitempty"`
-	Plate         string                 `protobuf:"bytes,4,opt,name=plate,proto3" json:"plate,omitempty"`
-	Model         string                 `protobuf:"bytes,5,opt,name=model,proto3" json:"model,omitempty"`
-	Year          int32                  `protobuf:"varint,6,opt,name=year,proto3" json:"year,omitempty"`
-	Color         string                 `protobuf:"bytes,7,opt,name=color,proto3" json:"color,omitempty"`
-	CreatedAt     string                 `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     string                 `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	state         protoimpl.MessageState  `protogen:"open.v1"`
+	Id            string                  `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	CustomerId    *wrapperspb.StringValue `protobuf:"bytes,2,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
+	Vin           string                  `protobuf:"bytes,3,opt,name=vin,proto3" json:"vin,omitempty"`
+	Plate         string                  `protobuf:"bytes,4,opt,name=plate,proto3" json:"plate,omitempty"`
+	Model         string                  `protobuf:"bytes,5,opt,name=model,proto3" json:"model,omitempty"`
+	Year          int32                   `protobuf:"varint,6,opt,name=year,proto3" json:"year,omitempty"`
+	Color         string                  `protobuf:"bytes,7,opt,name=color,proto3" json:"color,omitempty"`
+	CreatedAt     string                  `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt     string                  `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -74,11 +75,11 @@ func (x *VehicleResponse) GetId() string {
 	return ""
 }
 
-func (x *VehicleResponse) GetCustomerId() string {
+func (x *VehicleResponse) GetCustomerId() *wrapperspb.StringValue {
 	if x != nil {
 		return x.CustomerId
 	}
-	return ""
+	return nil
 }
 
 func (x *VehicleResponse) GetVin() string {
@@ -555,10 +556,10 @@ var File_proto_vehicle_v1_vehicle_proto protoreflect.FileDescriptor
 const file_proto_vehicle_v1_vehicle_proto_rawDesc = "" +
 	"\n" +
 	"\x1eproto/vehicle/v1/vehicle.proto\x12\n" +
-	"vehicle.v1\x1a\x1bgoogle/protobuf/empty.proto\"\xe8\x01\n" +
+	"vehicle.v1\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1egoogle/protobuf/wrappers.proto\"\x86\x02\n" +
 	"\x0fVehicleResponse\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
-	"\vcustomer_id\x18\x02 \x01(\tR\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12=\n" +
+	"\vcustomer_id\x18\x02 \x01(\v2\x1c.google.protobuf.StringValueR\n" +
 	"customerId\x12\x10\n" +
 	"\x03vin\x18\x03 \x01(\tR\x03vin\x12\x14\n" +
 	"\x05plate\x18\x04 \x01(\tR\x05plate\x12\x14\n" +
@@ -605,7 +606,7 @@ const file_proto_vehicle_v1_vehicle_proto_rawDesc = "" +
 	"GetVehicle\x12\x1d.vehicle.v1.GetVehicleRequest\x1a\x1b.vehicle.v1.VehicleResponse\x12Q\n" +
 	"\fListVehicles\x12\x1f.vehicle.v1.ListVehiclesRequest\x1a .vehicle.v1.ListVehiclesResponse\x12N\n" +
 	"\rUpdateVehicle\x12 .vehicle.v1.UpdateVehicleRequest\x1a\x1b.vehicle.v1.VehicleResponse\x12I\n" +
-	"\rDeleteVehicle\x12 .vehicle.v1.DeleteVehicleRequest\x1a\x16.google.protobuf.EmptyB!Z\x1ftorque/gen/vehicle/v1;vehiclev1b\x06proto3"
+	"\rDeleteVehicle\x12 .vehicle.v1.DeleteVehicleRequest\x1a\x16.google.protobuf.EmptyB'Z%torque/gen/proto/vehicle/v1;vehiclev1b\x06proto3"
 
 var (
 	file_proto_vehicle_v1_vehicle_proto_rawDescOnce sync.Once
@@ -621,34 +622,36 @@ func file_proto_vehicle_v1_vehicle_proto_rawDescGZIP() []byte {
 
 var file_proto_vehicle_v1_vehicle_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_proto_vehicle_v1_vehicle_proto_goTypes = []any{
-	(*VehicleResponse)(nil),      // 0: vehicle.v1.VehicleResponse
-	(*CreateVehicleRequest)(nil), // 1: vehicle.v1.CreateVehicleRequest
-	(*GetVehicleRequest)(nil),    // 2: vehicle.v1.GetVehicleRequest
-	(*ListVehiclesRequest)(nil),  // 3: vehicle.v1.ListVehiclesRequest
-	(*ListVehiclesResponse)(nil), // 4: vehicle.v1.ListVehiclesResponse
-	(*PageMeta)(nil),             // 5: vehicle.v1.PageMeta
-	(*UpdateVehicleRequest)(nil), // 6: vehicle.v1.UpdateVehicleRequest
-	(*DeleteVehicleRequest)(nil), // 7: vehicle.v1.DeleteVehicleRequest
-	(*emptypb.Empty)(nil),        // 8: google.protobuf.Empty
+	(*VehicleResponse)(nil),        // 0: vehicle.v1.VehicleResponse
+	(*CreateVehicleRequest)(nil),   // 1: vehicle.v1.CreateVehicleRequest
+	(*GetVehicleRequest)(nil),      // 2: vehicle.v1.GetVehicleRequest
+	(*ListVehiclesRequest)(nil),    // 3: vehicle.v1.ListVehiclesRequest
+	(*ListVehiclesResponse)(nil),   // 4: vehicle.v1.ListVehiclesResponse
+	(*PageMeta)(nil),               // 5: vehicle.v1.PageMeta
+	(*UpdateVehicleRequest)(nil),   // 6: vehicle.v1.UpdateVehicleRequest
+	(*DeleteVehicleRequest)(nil),   // 7: vehicle.v1.DeleteVehicleRequest
+	(*wrapperspb.StringValue)(nil), // 8: google.protobuf.StringValue
+	(*emptypb.Empty)(nil),          // 9: google.protobuf.Empty
 }
 var file_proto_vehicle_v1_vehicle_proto_depIdxs = []int32{
-	0, // 0: vehicle.v1.ListVehiclesResponse.vehicles:type_name -> vehicle.v1.VehicleResponse
-	5, // 1: vehicle.v1.ListVehiclesResponse.meta:type_name -> vehicle.v1.PageMeta
-	1, // 2: vehicle.v1.VehicleService.CreateVehicle:input_type -> vehicle.v1.CreateVehicleRequest
-	2, // 3: vehicle.v1.VehicleService.GetVehicle:input_type -> vehicle.v1.GetVehicleRequest
-	3, // 4: vehicle.v1.VehicleService.ListVehicles:input_type -> vehicle.v1.ListVehiclesRequest
-	6, // 5: vehicle.v1.VehicleService.UpdateVehicle:input_type -> vehicle.v1.UpdateVehicleRequest
-	7, // 6: vehicle.v1.VehicleService.DeleteVehicle:input_type -> vehicle.v1.DeleteVehicleRequest
-	0, // 7: vehicle.v1.VehicleService.CreateVehicle:output_type -> vehicle.v1.VehicleResponse
-	0, // 8: vehicle.v1.VehicleService.GetVehicle:output_type -> vehicle.v1.VehicleResponse
-	4, // 9: vehicle.v1.VehicleService.ListVehicles:output_type -> vehicle.v1.ListVehiclesResponse
-	0, // 10: vehicle.v1.VehicleService.UpdateVehicle:output_type -> vehicle.v1.VehicleResponse
-	8, // 11: vehicle.v1.VehicleService.DeleteVehicle:output_type -> google.protobuf.Empty
-	7, // [7:12] is the sub-list for method output_type
-	2, // [2:7] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	8, // 0: vehicle.v1.VehicleResponse.customer_id:type_name -> google.protobuf.StringValue
+	0, // 1: vehicle.v1.ListVehiclesResponse.vehicles:type_name -> vehicle.v1.VehicleResponse
+	5, // 2: vehicle.v1.ListVehiclesResponse.meta:type_name -> vehicle.v1.PageMeta
+	1, // 3: vehicle.v1.VehicleService.CreateVehicle:input_type -> vehicle.v1.CreateVehicleRequest
+	2, // 4: vehicle.v1.VehicleService.GetVehicle:input_type -> vehicle.v1.GetVehicleRequest
+	3, // 5: vehicle.v1.VehicleService.ListVehicles:input_type -> vehicle.v1.ListVehiclesRequest
+	6, // 6: vehicle.v1.VehicleService.UpdateVehicle:input_type -> vehicle.v1.UpdateVehicleRequest
+	7, // 7: vehicle.v1.VehicleService.DeleteVehicle:input_type -> vehicle.v1.DeleteVehicleRequest
+	0, // 8: vehicle.v1.VehicleService.CreateVehicle:output_type -> vehicle.v1.VehicleResponse
+	0, // 9: vehicle.v1.VehicleService.GetVehicle:output_type -> vehicle.v1.VehicleResponse
+	4, // 10: vehicle.v1.VehicleService.ListVehicles:output_type -> vehicle.v1.ListVehiclesResponse
+	0, // 11: vehicle.v1.VehicleService.UpdateVehicle:output_type -> vehicle.v1.VehicleResponse
+	9, // 12: vehicle.v1.VehicleService.DeleteVehicle:output_type -> google.protobuf.Empty
+	8, // [8:13] is the sub-list for method output_type
+	3, // [3:8] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_proto_vehicle_v1_vehicle_proto_init() }

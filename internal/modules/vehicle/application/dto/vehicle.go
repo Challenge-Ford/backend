@@ -6,7 +6,7 @@ import (
 )
 
 type CreateVehicleInput struct {
-	CustomerID uuid.UUID `json:"customerId" validate:"required"`
+	CustomerID *uuid.UUID `json:"customerId" validate:"omitempty"`
 	VIN        string    `json:"vin"        validate:"required,vin"`
 	Plate      string    `json:"plate"      validate:"required,plate"`
 	Model      string    `json:"model"      validate:"required"`
@@ -22,9 +22,9 @@ type UpdateVehicleInput struct {
 }
 
 type VehicleOutput struct {
-	ID         string `json:"id"`
-	CustomerID string `json:"customerId"`
-	VIN        string `json:"vin"`
+	ID         string  `json:"id"`
+	CustomerID *string `json:"customerId"`
+	VIN        string  `json:"vin"`
 	Plate      string `json:"plate"`
 	Model      string `json:"model"`
 	Year       int    `json:"year"`
@@ -34,9 +34,15 @@ type VehicleOutput struct {
 }
 
 func ToVehicleOutput(v *vehicledomain.Vehicle) *VehicleOutput {
+	var customerID *string
+	if v.CustomerID != nil {
+		s := v.CustomerID.String()
+		customerID = &s
+	}
+
 	return &VehicleOutput{
 		ID:         v.ID.String(),
-		CustomerID: v.CustomerID.String(),
+		CustomerID: customerID,
 		VIN:        string(v.VIN),
 		Plate:      string(v.Plate),
 		Model:      v.Model,

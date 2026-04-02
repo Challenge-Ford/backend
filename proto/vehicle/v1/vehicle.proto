@@ -5,6 +5,7 @@ package vehicle.v1;
 option go_package = "torque/gen/proto/vehicle/v1;vehiclev1";
 
 import "google/protobuf/empty.proto";
+import "google/protobuf/wrappers.proto";
 
 service VehicleService {
   rpc CreateVehicle(CreateVehicleRequest) returns (VehicleResponse);
@@ -16,7 +17,7 @@ service VehicleService {
 
 message VehicleResponse {
   string id          = 1;
-  string customer_id = 2 [json_name = "customerId"];
+  google.protobuf.StringValue customer_id = 2 [json_name = "customerId"];
   string vin         = 3;
   string plate       = 4;
   string model       = 5;

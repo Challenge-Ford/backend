@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 	"torque/cmd/api/grpcerr"
 	"torque/internal/core/pagination"
 	vehicledto "torque/internal/modules/vehicle/application/dto"
@@ -33,9 +34,13 @@ func NewVehicleHandler(
 }
 
 func (h *VehicleHandler) CreateVehicle(ctx context.Context, req *vehiclev1.CreateVehicleRequest) (*vehiclev1.VehicleResponse, error) {
-	customerID, err := uuid.Parse(req.CustomerId)
-	if err != nil {
-		return nil, grpcerr.From(err)
+	var customerID *uuid.UUID
+	if req.CustomerId != "" {
+		parsed, err := uuid.Parse(req.CustomerId)
+		if err != nil {
+			return nil, grpcerr.From(err)
+		}
+		customerID = &parsed
 	}
 
 	output, err := h.create.Execute(ctx, vehicledto.CreateVehicleInput{
@@ -125,9 +130,14 @@ func (h *VehicleHandler) DeleteVehicle(ctx context.Context, req *vehiclev1.Delet
 }
 
 func toProto(v *vehicledto.VehicleOutput) *vehiclev1.VehicleResponse {
+	var customerID *wrapperspb.StringValue
+	if v.CustomerID != nil {
+		customerID = wrapperspb.String(*v.CustomerID)
+	}
+
 	return &vehiclev1.VehicleResponse{
 		Id:         v.ID,
-		CustomerId: v.CustomerID,
+		CustomerId: customerID,
 		Vin:        v.VIN,
 		Plate:      v.Plate,
 		Model:      v.Model,

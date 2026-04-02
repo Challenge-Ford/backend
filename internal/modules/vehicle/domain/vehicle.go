@@ -48,7 +48,7 @@ func (v *VehicleID) Scan(src any) error {
 
 type Vehicle struct {
 	ID         VehicleID `gorm:"type:uuid;primaryKey"`
-	CustomerID uuid.UUID `gorm:"type:uuid;not null;index"`
+	CustomerID *uuid.UUID `gorm:"type:uuid;index"`
 	VIN        VIN       `gorm:"uniqueIndex;not null"`
 	Plate      Plate     `gorm:"uniqueIndex;not null"`
 	Model      string    `gorm:"not null"`
