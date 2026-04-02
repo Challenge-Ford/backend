@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+package vehicle.v1;
+
+option go_package = "torque/gen/proto/vehicle/v1;vehiclev1";
+
+import "google/protobuf/empty.proto";
+
+service VehicleService {
+  rpc CreateVehicle(CreateVehicleRequest) returns (VehicleResponse);
+  rpc GetVehicle(GetVehicleRequest) returns (VehicleResponse);
+  rpc ListVehicles(ListVehiclesRequest) returns (ListVehiclesResponse);
+  rpc UpdateVehicle(UpdateVehicleRequest) returns (VehicleResponse);
+  rpc DeleteVehicle(DeleteVehicleRequest) returns (google.protobuf.Empty);
+}
+
+message VehicleResponse {
+  string id          = 1;
+  string customer_id = 2;
+  string vin         = 3;
+  string plate       = 4;
+  string model       = 5;
+  int32  year        = 6;
+  string color       = 7;
+  string created_at  = 8;
+  string updated_at  = 9;
+}
+
+message CreateVehicleRequest {
+  string customer_id = 1;
+  string vin         = 2;
+  string plate       = 3;
+  string model       = 4;
+  int32  year        = 5;
+  string color       = 6;
+}
+
+message GetVehicleRequest {
+  string id = 1;
+}
+
+message ListVehiclesRequest {
+  int32 page     = 1;
+  int32 per_page = 2;
+}
+
+message ListVehiclesResponse {
+  repeated VehicleResponse vehicles = 1;
+  PageMeta                 meta     = 2;
+}
+
+message PageMeta {
+  int32 page        = 1;
+  int32 per_page    = 2;
+  int32 total       = 3;
+  int32 total_pages = 4;
+}
+
+message UpdateVehicleRequest {
+  string id    = 1;
+  string plate = 2;
+  string model = 3;
+  int32  year  = 4;
+  string color = 5;
+}
+
+message DeleteVehicleRequest {
+  string id = 1;
+}
