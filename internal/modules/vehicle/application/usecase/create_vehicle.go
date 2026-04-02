@@ -3,6 +3,7 @@ package vehicleusecase
 import (
 	"context"
 
+	"github.com/go-playground/validator/v10"
 	"torque/internal/core/apperr"
 	"torque/internal/core/appctx"
 	vehicledto "torque/internal/modules/vehicle/application/dto"
@@ -10,15 +11,32 @@ import (
 )
 
 type CreateVehicleUseCase struct {
-	repo vehicledomain.Repository
+	repo     vehicledomain.Repository
+	validate *validator.Validate
 }
 
-func NewCreateVehicle(repo vehicledomain.Repository) *CreateVehicleUseCase {
-	return &CreateVehicleUseCase{repo: repo}
+func NewCreateVehicle(repo vehicledomain.Repository, validate *validator.Validate) *CreateVehicleUseCase {
+	return &CreateVehicleUseCase{repo: repo, validate: validate}
 }
 
 func (uc *CreateVehicleUseCase) Execute(ctx context.Context, input vehicledto.CreateVehicleInput) (*vehicledto.VehicleOutput, error) {
 	auth := appctx.MustGetAuth(ctx)
+
+	if err := uc.validate.Struct(input); err != nil {
+		return nil, apperr.FromValidatorErr(err)
+	}
+
+	if existing, err := uc.repo.GetByVIN(ctx, vehicledomain.VIN(input.VIN)); err != nil {
+		return nil, apperr.Internal("failed to check VIN", err)
+	} else if existing != nil {
+		return nil, apperr.Conflict("vehicle with this VIN already exists")
+	}
+
+	if existing, err := uc.repo.GetByPlate(ctx, vehicledomain.Plate(input.Plate)); err != nil {
+		return nil, apperr.Internal("failed to check plate", err)
+	} else if existing != nil {
+		return nil, apperr.Conflict("vehicle with this plate already exists")
+	}
 
 	vehicle := &vehicledomain.Vehicle{
 		ID:         vehicledomain.NewVehicleID(),

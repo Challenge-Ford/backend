@@ -6,19 +6,19 @@ import (
 )
 
 type CreateVehicleInput struct {
-	CustomerID uuid.UUID `validate:"required"`
-	VIN        string    `validate:"required,vin"`
-	Plate      string    `validate:"required,plate"`
-	Model      string    `validate:"required"`
-	Year       int       `validate:"required,min=1886"`
-	Color      string    `validate:"required,hexcolor"`
+	CustomerID uuid.UUID `json:"customerId" validate:"required"`
+	VIN        string    `json:"vin"        validate:"required,vin"`
+	Plate      string    `json:"plate"      validate:"required,plate"`
+	Model      string    `json:"model"      validate:"required"`
+	Year       int       `json:"year"       validate:"required,min=1886"`
+	Color      string    `json:"color"      validate:"required,hexcolor"`
 }
 
 type UpdateVehicleInput struct {
-	Plate string `validate:"omitempty,plate"`
-	Model string `validate:"omitempty"`
-	Year  int    `validate:"omitempty,min=1886"`
-	Color string `validate:"omitempty,hexcolor"`
+	Plate string `json:"plate" validate:"omitempty,plate"`
+	Model string `json:"model" validate:"omitempty"`
+	Year  int    `json:"year"  validate:"omitempty,min=1886"`
+	Color string `json:"color" validate:"omitempty,hexcolor"`
 }
 
 type VehicleOutput struct {

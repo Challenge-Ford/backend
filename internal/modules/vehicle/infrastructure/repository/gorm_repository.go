@@ -44,6 +44,18 @@ func (r *GormRepository) GetByVIN(ctx context.Context, vin vehicledomain.VIN) (*
 	return &vehicle, nil
 }
 
+func (r *GormRepository) GetByPlate(ctx context.Context, plate vehicledomain.Plate) (*vehicledomain.Vehicle, error) {
+	var vehicle vehicledomain.Vehicle
+	err := r.db.WithContext(ctx).First(&vehicle, "plate = ?", plate).Error
+	if err == gorm.ErrRecordNotFound {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &vehicle, nil
+}
+
 func (r *GormRepository) List(ctx context.Context, page pagination.Page) ([]*vehicledomain.Vehicle, int, error) {
 	var vehicles []*vehicledomain.Vehicle
 	var total int64

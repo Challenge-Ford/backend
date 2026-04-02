@@ -167,6 +167,12 @@ func humanizeMessage(fe validator.FieldError) string {
 		return fmt.Sprintf("must have at most %s characters", param)
 	case "len":
 		return fmt.Sprintf("must have exactly %s characters", param)
+	case "vin":
+		return "must be a valid 17-character VIN (I, O and Q are not allowed)"
+	case "plate":
+		return "must be a valid Brazilian plate (e.g. ABC-1234 or ABC1D23)"
+	case "hexcolor":
+		return "must be a valid hex color code (e.g. #FF0000)"
 	default:
 		return fmt.Sprintf("invalid value (rule '%s')", tag)
 	}
@@ -185,7 +191,7 @@ func isNumeric(kind reflect.Kind) bool {
 func fieldPath(fe validator.FieldError) string {
 	ns := fe.StructNamespace()
 	if ns == "" {
-		return toSnakeCase(fe.Field())
+		return toLowerCamel(fe.Field())
 	}
 
 	parts := strings.SplitN(ns, ".", 2)
@@ -196,19 +202,21 @@ func fieldPath(fe validator.FieldError) string {
 	segments := strings.Split(ns, ".")
 	for i, s := range segments {
 		if !strings.Contains(s, "[") {
-			segments[i] = toSnakeCase(s)
+			segments[i] = toLowerCamel(s)
 		}
 	}
 	return strings.Join(segments, ".")
 }
 
-func toSnakeCase(s string) string {
-	var b strings.Builder
-	for i, r := range s {
-		if i > 0 && r >= 'A' && r <= 'Z' {
-			b.WriteByte('_')
-		}
-		b.WriteRune(r)
+func toLowerCamel(s string) string {
+	if s == "" {
+		return s
 	}
-	return strings.ToLower(b.String())
+	// All-uppercase words (e.g. VIN, ID) become fully lowercase
+	if s == strings.ToUpper(s) {
+		return strings.ToLower(s)
+	}
+	runes := []rune(s)
+	runes[0] = []rune(strings.ToLower(string(runes[0])))[0]
+	return string(runes)
 }
