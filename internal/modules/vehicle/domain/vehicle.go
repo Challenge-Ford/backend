@@ -1,7 +1,10 @@
 package vehicledomain
 
 import (
+	"time"
+
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 	"torque/internal/core/db"
 	"torque/internal/core/id"
 )
@@ -25,4 +28,10 @@ type Vehicle struct {
 	Year       int       `gorm:"not null"`
 	Color      Color     `gorm:"not null"`
 	db.AuditableModel
+}
+
+func (v *Vehicle) Delete(byUser uuid.UUID) {
+	now := time.Now()
+	v.DeletedAt = gorm.DeletedAt{Time: now, Valid: true}
+	v.DeletedBy = &byUser
 }

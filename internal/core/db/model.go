@@ -24,4 +24,5 @@ type AuditableModel struct {
 	DeletedAt gorm.DeletedAt `json:"deletedAt" gorm:"index"`
 	CreatedBy uuid.UUID      `json:"createdBy"`
 	UpdatedBy uuid.UUID      `json:"updatedBy"`
+	DeletedBy *uuid.UUID     `json:"deletedBy"`
 }
