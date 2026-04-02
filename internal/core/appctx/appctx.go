@@ -1,9 +1,13 @@
 package appctx
 
-import "context"
+import (
+	"context"
+
+	"github.com/google/uuid"
+)
 
 type AuthContext struct {
-	UserID       string
+	UserID       uuid.UUID
 	DealershipID string
 	Role         string
 }
