@@ -16,18 +16,18 @@ service VehicleService {
 
 message VehicleResponse {
   string id          = 1;
-  string customer_id = 2;
+  string customer_id = 2 [json_name = "customerId"];
   string vin         = 3;
   string plate       = 4;
   string model       = 5;
   int32  year        = 6;
   string color       = 7;
-  string created_at  = 8;
-  string updated_at  = 9;
+  string created_at  = 8 [json_name = "createdAt"];
+  string updated_at  = 9 [json_name = "updatedAt"];
 }
 
 message CreateVehicleRequest {
-  string customer_id = 1;
+  string customer_id = 1 [json_name = "customerId"];
   string vin         = 2;
   string plate       = 3;
   string model       = 4;
@@ -41,7 +41,7 @@ message GetVehicleRequest {
 
 message ListVehiclesRequest {
   int32 page     = 1;
-  int32 per_page = 2;
+  int32 per_page = 2 [json_name = "perPage"];
 }
 
 message ListVehiclesResponse {
@@ -51,9 +51,9 @@ message ListVehiclesResponse {
 
 message PageMeta {
   int32 page        = 1;
-  int32 per_page    = 2;
+  int32 per_page    = 2 [json_name = "perPage"];
   int32 total       = 3;
-  int32 total_pages = 4;
+  int32 total_pages = 4 [json_name = "totalPages"];
 }
 
 message UpdateVehicleRequest {
