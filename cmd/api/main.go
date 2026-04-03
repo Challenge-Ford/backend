@@ -2,15 +2,13 @@ package main
 
 import (
 	"fmt"
-	"net"
+	"net/http"
 	"os"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
 	"github.com/joho/godotenv"
 	"go.uber.org/zap"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/reflection"
-	vehiclev1 "torque/gen/proto/vehicle/v1"
 	"torque/cmd/api/handler"
 	"torque/cmd/api/middleware"
 	"torque/internal/core/db"
@@ -63,7 +61,7 @@ func main() {
 		return vehicledomain.Plate(fl.Field().String()).Validate() == nil
 	})
 
-	vehicleHandler := handler.NewVehicleHandler(
+	vehicles := handler.NewVehicleHandler(
 		vehicleusecase.NewCreateVehicle(repo, validate),
 		vehicleusecase.NewGetVehicle(repo),
 		vehicleusecase.NewListVehicles(repo),
@@ -71,22 +69,20 @@ func main() {
 		vehicleusecase.NewDeleteVehicle(repo),
 	)
 
-	grpcServer := grpc.NewServer(
-		grpc.UnaryInterceptor(middleware.Auth),
-	)
-	vehiclev1.RegisterVehicleServiceServer(grpcServer, vehicleHandler)
+	r := chi.NewRouter()
+	r.Use(middleware.Auth)
 
-	if os.Getenv("GRPC_REFLECTION") == "true" {
-		reflection.Register(grpcServer)
-	}
+	r.Route("/vehicles", func(r chi.Router) {
+		r.Get("/", vehicles.List)
+		r.Post("/", vehicles.Create)
+		r.Get("/{id}", vehicles.Get)
+		r.Patch("/{id}", vehicles.Update)
+		r.Delete("/{id}", vehicles.Delete)
+	})
 
-	lis, err := net.Listen("tcp", ":"+mustEnv("PORT"))
-	if err != nil {
-		log.Fatal("failed to listen", zap.Error(err))
-	}
-
-	log.Info("starting gRPC server", zap.String("port", mustEnv("PORT")))
-	if err := grpcServer.Serve(lis); err != nil {
+	port := mustEnv("PORT")
+	log.Info("starting HTTP server", zap.String("port", port))
+	if err := http.ListenAndServe(":"+port, r); err != nil {
 		log.Fatal("failed to serve", zap.Error(err))
 	}
 }

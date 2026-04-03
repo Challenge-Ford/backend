@@ -3,11 +3,12 @@ package vehicleusecase
 import (
 	"context"
 
-	"github.com/go-playground/validator/v10"
-	"torque/internal/core/apperr"
 	"torque/internal/core/appctx"
+	"torque/internal/core/apperr"
 	vehicledto "torque/internal/modules/vehicle/application/dto"
 	vehicledomain "torque/internal/modules/vehicle/domain"
+
+	"github.com/go-playground/validator/v10"
 )
 
 type CreateVehicleUseCase struct {

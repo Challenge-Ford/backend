@@ -7,9 +7,8 @@ import (
 )
 
 type AuthContext struct {
-	UserID       uuid.UUID
-	DealershipID string
-	Role         string
+	UserID uuid.UUID
+	Role   string
 }
 
 type authContextKey struct{}

@@ -1,21 +1,20 @@
 package handler
 
 import (
-	"context"
+	"encoding/json"
+	"net/http"
+	"strconv"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"google.golang.org/protobuf/types/known/emptypb"
-	"google.golang.org/protobuf/types/known/wrapperspb"
-	"torque/cmd/api/grpcerr"
+	"torque/cmd/api/httperr"
 	"torque/internal/core/pagination"
 	vehicledto "torque/internal/modules/vehicle/application/dto"
 	vehicleusecase "torque/internal/modules/vehicle/application/usecase"
 	vehicledomain "torque/internal/modules/vehicle/domain"
-	vehiclev1 "torque/gen/proto/vehicle/v1"
 )
 
 type VehicleHandler struct {
-	vehiclev1.UnimplementedVehicleServiceServer
 	create *vehicleusecase.CreateVehicleUseCase
 	get    *vehicleusecase.GetVehicleUseCase
 	list   *vehicleusecase.ListVehiclesUseCase
@@ -33,117 +32,87 @@ func NewVehicleHandler(
 	return &VehicleHandler{create: create, get: get, list: list, update: update, delete: delete}
 }
 
-func (h *VehicleHandler) CreateVehicle(ctx context.Context, req *vehiclev1.CreateVehicleRequest) (*vehiclev1.VehicleResponse, error) {
-	var customerID *uuid.UUID
-	if req.CustomerId != "" {
-		parsed, err := uuid.Parse(req.CustomerId)
-		if err != nil {
-			return nil, grpcerr.From(err)
-		}
-		customerID = &parsed
+func (h *VehicleHandler) Create(w http.ResponseWriter, r *http.Request) {
+	var input vehicledto.CreateVehicleInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		httperr.Write(w, err)
+		return
 	}
 
-	output, err := h.create.Execute(ctx, vehicledto.CreateVehicleInput{
-		CustomerID: customerID,
-		VIN:        req.Vin,
-		Plate:      req.Plate,
-		Model:      req.Model,
-		Year:       int(req.Year),
-		Color:      req.Color,
+	output, err := h.create.Execute(r.Context(), input)
+	if err != nil {
+		httperr.Write(w, err)
+		return
+	}
+
+	httperr.JSON(w, http.StatusCreated, output)
+}
+
+func (h *VehicleHandler) Get(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httperr.Write(w, err)
+		return
+	}
+
+	output, err := h.get.Execute(r.Context(), vehicledomain.VehicleID(id))
+	if err != nil {
+		httperr.Write(w, err)
+		return
+	}
+
+	httperr.JSON(w, http.StatusOK, output)
+}
+
+func (h *VehicleHandler) List(w http.ResponseWriter, r *http.Request) {
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	perPage, _ := strconv.Atoi(r.URL.Query().Get("perPage"))
+
+	result, err := h.list.Execute(r.Context(), pagination.Page{
+		Page:    page,
+		PerPage: perPage,
 	})
 	if err != nil {
-		return nil, grpcerr.From(err)
+		httperr.Write(w, err)
+		return
 	}
 
-	return toProto(output), nil
+	httperr.JSON(w, http.StatusOK, result)
 }
 
-func (h *VehicleHandler) GetVehicle(ctx context.Context, req *vehiclev1.GetVehicleRequest) (*vehiclev1.VehicleResponse, error) {
-	id, err := uuid.Parse(req.Id)
+func (h *VehicleHandler) Update(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		return nil, grpcerr.From(err)
+		httperr.Write(w, err)
+		return
 	}
 
-	output, err := h.get.Execute(ctx, vehicledomain.VehicleID(id))
-	if err != nil {
-		return nil, grpcerr.From(err)
+	var input vehicledto.UpdateVehicleInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		httperr.Write(w, err)
+		return
 	}
 
-	return toProto(output), nil
+	output, err := h.update.Execute(r.Context(), vehicledomain.VehicleID(id), input)
+	if err != nil {
+		httperr.Write(w, err)
+		return
+	}
+
+	httperr.JSON(w, http.StatusOK, output)
 }
 
-func (h *VehicleHandler) ListVehicles(ctx context.Context, req *vehiclev1.ListVehiclesRequest) (*vehiclev1.ListVehiclesResponse, error) {
-	result, err := h.list.Execute(ctx, pagination.Page{
-		Page:    int(req.Page),
-		PerPage: int(req.PerPage),
-	})
+func (h *VehicleHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		return nil, grpcerr.From(err)
+		httperr.Write(w, err)
+		return
 	}
 
-	vehicles := make([]*vehiclev1.VehicleResponse, len(result.Data))
-	for i, v := range result.Data {
-		vehicles[i] = toProto(v)
+	if err := h.delete.Execute(r.Context(), vehicledomain.VehicleID(id)); err != nil {
+		httperr.Write(w, err)
+		return
 	}
 
-	return &vehiclev1.ListVehiclesResponse{
-		Vehicles: vehicles,
-		Meta: &vehiclev1.PageMeta{
-			Page:       int32(result.Meta.Page),
-			PerPage:    int32(result.Meta.PerPage),
-			Total:      int32(result.Meta.Total),
-			TotalPages: int32(result.Meta.TotalPages),
-		},
-	}, nil
-}
-
-func (h *VehicleHandler) UpdateVehicle(ctx context.Context, req *vehiclev1.UpdateVehicleRequest) (*vehiclev1.VehicleResponse, error) {
-	id, err := uuid.Parse(req.Id)
-	if err != nil {
-		return nil, grpcerr.From(err)
-	}
-
-	output, err := h.update.Execute(ctx, vehicledomain.VehicleID(id), vehicledto.UpdateVehicleInput{
-		Plate: req.Plate,
-		Model: req.Model,
-		Year:  int(req.Year),
-		Color: req.Color,
-	})
-	if err != nil {
-		return nil, grpcerr.From(err)
-	}
-
-	return toProto(output), nil
-}
-
-func (h *VehicleHandler) DeleteVehicle(ctx context.Context, req *vehiclev1.DeleteVehicleRequest) (*emptypb.Empty, error) {
-	id, err := uuid.Parse(req.Id)
-	if err != nil {
-		return nil, grpcerr.From(err)
-	}
-
-	if err := h.delete.Execute(ctx, vehicledomain.VehicleID(id)); err != nil {
-		return nil, grpcerr.From(err)
-	}
-
-	return &emptypb.Empty{}, nil
-}
-
-func toProto(v *vehicledto.VehicleOutput) *vehiclev1.VehicleResponse {
-	var customerID *wrapperspb.StringValue
-	if v.CustomerID != nil {
-		customerID = wrapperspb.String(*v.CustomerID)
-	}
-
-	return &vehiclev1.VehicleResponse{
-		Id:         v.ID,
-		CustomerId: customerID,
-		Vin:        v.VIN,
-		Plate:      v.Plate,
-		Model:      v.Model,
-		Year:       int32(v.Year),
-		Color:      v.Color,
-		CreatedAt:  v.CreatedAt,
-		UpdatedAt:  v.UpdatedAt,
-	}
+	w.WriteHeader(http.StatusNoContent)
 }
