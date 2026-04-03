@@ -47,11 +47,27 @@ func main() {
 		log.Fatal("failed to create schema", zap.Error(err))
 	}
 
-	if err := db.Migrate(conn, &vehicledomain.Vehicle{}); err != nil {
+	if err := db.Migrate(conn,
+		&vehicledomain.VehicleModel{},
+		&vehicledomain.VehicleModelYear{},
+		&vehicledomain.Vehicle{},
+	); err != nil {
 		log.Fatal("migration failed", zap.Error(err))
 	}
 
+	migrations := []string{
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_vehicle_model_years_unique ON vehicle.vehicle_model_years (model_id, year)`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_vehicles_vin_active ON vehicle.vehicles (vin) WHERE deleted_at IS NULL`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_vehicles_plate_active ON vehicle.vehicles (plate) WHERE deleted_at IS NULL`,
+	}
+	for _, sql := range migrations {
+		if err := conn.Exec(sql).Error; err != nil {
+			log.Fatal("failed to create index", zap.String("sql", sql), zap.Error(err))
+		}
+	}
+
 	repo := vehiclerepository.NewGormRepository(conn)
+	modelRepo := vehiclerepository.NewGormModelRepository(conn)
 
 	validate := validator.New()
 	validate.RegisterValidation("vin", func(fl validator.FieldLevel) bool {
@@ -62,11 +78,16 @@ func main() {
 	})
 
 	vehicles := handler.NewVehicleHandler(
-		vehicleusecase.NewCreateVehicle(repo, validate),
+		vehicleusecase.NewCreateVehicle(repo, modelRepo, validate),
 		vehicleusecase.NewGetVehicle(repo),
 		vehicleusecase.NewListVehicles(repo),
-		vehicleusecase.NewUpdateVehicle(repo),
+		vehicleusecase.NewUpdateVehicle(repo, modelRepo),
 		vehicleusecase.NewDeleteVehicle(repo),
+	)
+
+	vehicleModels := handler.NewVehicleModelHandler(
+		vehicleusecase.NewListVehicleModels(modelRepo),
+		vehicleusecase.NewListVehicleModelYears(modelRepo),
 	)
 
 	r := chi.NewRouter()
@@ -78,6 +99,11 @@ func main() {
 		r.Get("/{id}", vehicles.Get)
 		r.Patch("/{id}", vehicles.Update)
 		r.Delete("/{id}", vehicles.Delete)
+	})
+
+	r.Route("/vehicle-models", func(r chi.Router) {
+		r.Get("/", vehicleModels.List)
+		r.Get("/{id}/years", vehicleModels.ListYears)
 	})
 
 	port := mustEnv("PORT")

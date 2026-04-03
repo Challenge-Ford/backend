@@ -9,7 +9,7 @@ type Plate string
 
 var (
 	ErrInvalidPlate    = errors.New("invalid plate format")
-	plateOldRegex      = regexp.MustCompile(`^[A-Z]{3}-\d{4}$`)
+	plateOldRegex      = regexp.MustCompile(`^[A-Z]{3}\d{4}$`)
 	plateMercosulRegex = regexp.MustCompile(`^[A-Z]{3}\d[A-Z]\d{2}$`)
 )
 

@@ -22,7 +22,7 @@ func (r *GormRepository) Save(ctx context.Context, vehicle *vehicledomain.Vehicl
 
 func (r *GormRepository) GetByID(ctx context.Context, id vehicledomain.VehicleID) (*vehicledomain.Vehicle, error) {
 	var vehicle vehicledomain.Vehicle
-	err := r.db.WithContext(ctx).First(&vehicle, "id = ?", id).Error
+	err := r.db.WithContext(ctx).Preload("ModelYear.Model").First(&vehicle, "id = ?", id).Error
 	if err == gorm.ErrRecordNotFound {
 		return nil, nil
 	}
@@ -65,6 +65,7 @@ func (r *GormRepository) List(ctx context.Context, page pagination.Page) ([]*veh
 	}
 
 	if err := r.db.WithContext(ctx).
+		Preload("ModelYear.Model").
 		Offset(page.Offset()).
 		Limit(page.PerPage).
 		Find(&vehicles).Error; err != nil {

@@ -10,11 +10,12 @@ import (
 )
 
 type UpdateVehicleUseCase struct {
-	repo vehicledomain.Repository
+	repo      vehicledomain.Repository
+	modelRepo vehicledomain.ModelRepository
 }
 
-func NewUpdateVehicle(repo vehicledomain.Repository) *UpdateVehicleUseCase {
-	return &UpdateVehicleUseCase{repo: repo}
+func NewUpdateVehicle(repo vehicledomain.Repository, modelRepo vehicledomain.ModelRepository) *UpdateVehicleUseCase {
+	return &UpdateVehicleUseCase{repo: repo, modelRepo: modelRepo}
 }
 
 func (uc *UpdateVehicleUseCase) Execute(ctx context.Context, id vehicledomain.VehicleID, input vehicledto.UpdateVehicleInput) (*vehicledto.VehicleOutput, error) {
@@ -28,20 +29,24 @@ func (uc *UpdateVehicleUseCase) Execute(ctx context.Context, id vehicledomain.Ve
 		return nil, apperr.NotFound("vehicle")
 	}
 
+	if input.ModelYearID != nil {
+		modelYear, err := uc.modelRepo.GetModelYearByID(ctx, vehicledomain.VehicleModelYearID(*input.ModelYearID))
+		if err != nil {
+			return nil, apperr.Internal("failed to get model year", err)
+		}
+		if modelYear == nil {
+			return nil, apperr.NotFound("vehicle model year")
+		}
+		vehicle.ModelYearID = vehicledomain.VehicleModelYearID(*input.ModelYearID)
+		vehicle.ModelYear = modelYear
+	}
+
 	if input.Plate != "" {
 		plate := vehicledomain.Plate(input.Plate)
 		if err := plate.Validate(); err != nil {
 			return nil, apperr.BadRequest(err.Error())
 		}
 		vehicle.Plate = plate
-	}
-
-	if input.Model != "" {
-		vehicle.Model = input.Model
-	}
-
-	if input.Year != 0 {
-		vehicle.Year = input.Year
 	}
 
 	if input.Color != "" {
