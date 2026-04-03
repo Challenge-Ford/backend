@@ -90,6 +90,21 @@ services:
     networks:
       - torque
 
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: torque
+      MINIO_ROOT_PASSWORD: torque123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    networks:
+      - torque
+
   mailhog:
     image: mailhog/mailhog:latest
     restart: unless-stopped
@@ -104,3 +119,4 @@ networks:
 
 volumes:
   postgres-data:
+  minio-data:

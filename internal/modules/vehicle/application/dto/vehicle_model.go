@@ -17,9 +17,10 @@ type VehicleModelOutput struct {
 }
 
 type VehicleModelYearOutput struct {
-	ID      string `json:"id"`
-	ModelID string `json:"modelId"`
-	Year    int    `json:"year"`
+	ID       string  `json:"id"`
+	ModelID  string  `json:"modelId"`
+	Year     int     `json:"year"`
+	ModelURL *string `json:"modelUrl"`
 }
 
 func ToVehicleModelOutput(m *vehicledomain.VehicleModel) *VehicleModelOutput {
@@ -32,8 +33,9 @@ func ToVehicleModelOutput(m *vehicledomain.VehicleModel) *VehicleModelOutput {
 
 func ToVehicleModelYearOutput(y *vehicledomain.VehicleModelYear) *VehicleModelYearOutput {
 	return &VehicleModelYearOutput{
-		ID:      y.ID.String(),
-		ModelID: y.ModelID.String(),
-		Year:    y.Year,
+		ID:       y.ID.String(),
+		ModelID:  y.ModelID.String(),
+		Year:     y.Year,
+		ModelURL: y.ModelURL,
 	}
 }

@@ -44,10 +44,11 @@ func (v *VehicleModelYearID) Scan(src any) error {
 }
 
 type VehicleModelYear struct {
-	ID      VehicleModelYearID `gorm:"type:uuid;primaryKey"`
-	ModelID VehicleModelID     `gorm:"type:uuid;not null;index"`
-	Year    int                `gorm:"not null"`
-	Model   *VehicleModel      `gorm:"foreignKey:ModelID"`
+	ID       VehicleModelYearID `gorm:"type:uuid;primaryKey"`
+	ModelID  VehicleModelID     `gorm:"type:uuid;not null;index"`
+	Year     int                `gorm:"not null"`
+	ModelURL *string            `gorm:"type:text"`
+	Model    *VehicleModel      `gorm:"foreignKey:ModelID"`
 }
 
 func (VehicleModelYear) TableName() string {
