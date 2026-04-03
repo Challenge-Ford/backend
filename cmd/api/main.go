@@ -50,6 +50,7 @@ func main() {
 	if err := db.Migrate(conn,
 		&vehicledomain.VehicleModel{},
 		&vehicledomain.VehicleModelYear{},
+		&vehicledomain.VehicleModelYearColor{},
 		&vehicledomain.Vehicle{},
 	); err != nil {
 		log.Fatal("migration failed", zap.Error(err))

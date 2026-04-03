@@ -49,7 +49,7 @@ func (r *GormModelRepository) GetModelYearByID(ctx context.Context, id vehicledo
 
 func (r *GormModelRepository) ListModelYears(ctx context.Context, modelID vehicledomain.VehicleModelID) ([]*vehicledomain.VehicleModelYear, error) {
 	var years []*vehicledomain.VehicleModelYear
-	if err := r.db.WithContext(ctx).Where("model_id = ?", modelID).Order("year ASC").Find(&years).Error; err != nil {
+	if err := r.db.WithContext(ctx).Preload("Colors").Where("model_id = ?", modelID).Order("year ASC").Find(&years).Error; err != nil {
 		return nil, err
 	}
 	return years, nil

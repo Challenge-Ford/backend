@@ -16,11 +16,18 @@ type VehicleModelOutput struct {
 	Type string `json:"type"`
 }
 
+type VehicleModelYearColorOutput struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Hex  string `json:"hex"`
+}
+
 type VehicleModelYearOutput struct {
-	ID       string  `json:"id"`
-	ModelID  string  `json:"modelId"`
-	Year     int     `json:"year"`
-	ModelURL *string `json:"modelUrl"`
+	ID       string                        `json:"id"`
+	ModelID  string                        `json:"modelId"`
+	Year     int                           `json:"year"`
+	ModelURL *string                       `json:"modelUrl"`
+	Colors   []VehicleModelYearColorOutput `json:"colors"`
 }
 
 func ToVehicleModelOutput(m *vehicledomain.VehicleModel) *VehicleModelOutput {
@@ -32,10 +39,19 @@ func ToVehicleModelOutput(m *vehicledomain.VehicleModel) *VehicleModelOutput {
 }
 
 func ToVehicleModelYearOutput(y *vehicledomain.VehicleModelYear) *VehicleModelYearOutput {
+	colors := make([]VehicleModelYearColorOutput, len(y.Colors))
+	for i, c := range y.Colors {
+		colors[i] = VehicleModelYearColorOutput{
+			ID:   c.ID.String(),
+			Name: c.Name,
+			Hex:  c.Hex,
+		}
+	}
 	return &VehicleModelYearOutput{
 		ID:       y.ID.String(),
 		ModelID:  y.ModelID.String(),
 		Year:     y.Year,
 		ModelURL: y.ModelURL,
+		Colors:   colors,
 	}
 }
