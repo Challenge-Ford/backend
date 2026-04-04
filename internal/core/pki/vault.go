@@ -60,6 +60,18 @@ func (v *VaultPKI) Issue(ctx context.Context, commonName string) (*IssuedCertifi
 	}, nil
 }
 
+func (v *VaultPKI) FetchCACert(ctx context.Context) (string, error) {
+	secret, err := v.client.Logical().ReadWithContext(ctx, "pki/cert/ca")
+	if err != nil {
+		return "", fmt.Errorf("pki: fetch ca cert: %w", err)
+	}
+	cert, ok := secret.Data["certificate"].(string)
+	if !ok {
+		return "", fmt.Errorf("pki: missing certificate in ca response")
+	}
+	return cert, nil
+}
+
 func (v *VaultPKI) Revoke(ctx context.Context, serialNumber string) error {
 	_, err := v.client.Logical().WriteWithContext(ctx,
 		"pki/revoke",

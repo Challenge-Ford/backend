@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/joho/godotenv"
@@ -44,8 +45,13 @@ func main() {
 
 	deviceRepo := devicerepository.NewGormRepository(conn)
 
-	authHandler := handler.NewAuthHandler(deviceusecase.NewAuthenticateDevice(deviceRepo))
-	aclHandler := handler.NewACLHandler(deviceusecase.NewAuthorizeDevice(deviceRepo))
+	var serviceCNs []string
+	if raw := os.Getenv("MQTT_SERVICE_CNS"); raw != "" {
+		serviceCNs = strings.Split(raw, ",")
+	}
+
+	authHandler := handler.NewAuthHandler(deviceusecase.NewAuthenticateDevice(deviceRepo, serviceCNs))
+	aclHandler := handler.NewACLHandler(deviceusecase.NewAuthorizeDevice(deviceRepo, serviceCNs))
 
 	r := chi.NewRouter()
 	r.Use(coremiddleware.Logger(log))
