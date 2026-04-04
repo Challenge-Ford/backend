@@ -115,6 +115,7 @@ vaultPKI, err := pki.NewVaultPKI(mustEnv("VAULT_ADDR"), mustEnv("VAULT_TOKEN"), 
 	)
 
 r := chi.NewRouter()
+	r.Use(middleware.Logger(log))
 	r.Use(middleware.Auth)
 
 	r.Route("/devices", func(r chi.Router) {
