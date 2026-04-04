@@ -73,32 +73,6 @@ func (r *GormRepository) GetByName(ctx context.Context, name string) (*devicedom
 	return &device, nil
 }
 
-func (r *GormRepository) GetByCN(ctx context.Context, cn string) (*devicedomain.Device, error) {
-	var device devicedomain.Device
-	err := r.db.WithContext(ctx).First(&device, "certificate_cn = ?", cn).Error
-	if err == gorm.ErrRecordNotFound {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	return &device, nil
-}
-
-func (r *GormRepository) GetByCNWithVehicle(ctx context.Context, cn string) (*devicedomain.Device, error) {
-	var device devicedomain.Device
-	err := r.db.WithContext(ctx).
-		Select(`device.devices.*, v.vin AS vehicle_vin`).
-		Joins("LEFT JOIN vehicle.vehicles v ON v.id = device.devices.vehicle_id AND v.deleted_at IS NULL").
-		First(&device, "device.devices.certificate_cn = ?", cn).Error
-	if err == gorm.ErrRecordNotFound {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	return &device, nil
-}
 
 func (r *GormRepository) GetByVehicleID(ctx context.Context, vehicleID uuid.UUID) (*devicedomain.Device, error) {
 	var device devicedomain.Device
