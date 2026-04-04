@@ -155,36 +155,12 @@ services:
       VAULT_TOKEN: torque
     volumes:
       - ./vault/setup.sh:/setup.sh:ro
-      - vault-token:/vault-token
-      - vault-ca:/vault-ca
     command: sh /setup.sh
     networks:
       - torque
     depends_on:
       vault:
         condition: service_healthy
-
-  emqx:
-    image: emqx/emqx:5.8
-    restart: unless-stopped
-    hostname: emqx
-    environment:
-      EMQX_NODE__NAME: "emqx@emqx"
-    ports:
-      - "1883:1883"
-      - "8883:8883"
-      - "18083:18083"
-    volumes:
-      - ./emqx/emqx.conf:/opt/emqx/etc/emqx.conf:ro
-      - emqx-data:/opt/emqx/data
-      - vault-ca:/opt/emqx/etc/certs:ro
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    networks:
-      - torque
-    depends_on:
-      vault-setup:
-        condition: service_completed_successfully
 
   rabbitmq:
     image: rabbitmq:4-management-alpine
@@ -208,7 +184,4 @@ volumes:
   postgres-data:
   timescaledb-data:
   minio-data:
-  vault-token:
-  emqx-data:
   rabbitmq-data:
-  vault-ca:
