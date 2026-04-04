@@ -99,7 +99,7 @@ func (c *StepCAClient) loadProvisionerKey(password string) error {
 			jwe, err := jose.ParseEncrypted(
 				p.EncryptedKey,
 				[]jose.KeyAlgorithm{jose.PBES2_HS256_A128KW, jose.PBES2_HS384_A192KW, jose.PBES2_HS512_A256KW},
-				[]jose.ContentEncryption{jose.A128CBC_HS256, jose.A192CBC_HS384, jose.A256CBC_HS512},
+				[]jose.ContentEncryption{jose.A128CBC_HS256, jose.A192CBC_HS384, jose.A256CBC_HS512, jose.A128GCM, jose.A192GCM, jose.A256GCM},
 			)
 			if err != nil {
 				return fmt.Errorf("pki: parse encrypted key: %w", err)
