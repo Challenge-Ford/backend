@@ -23,6 +23,16 @@ vault write -format=json pki/root/generate/internal \
   common_name="Torque Device CA" \
   ttl=87600h > /dev/null && echo "Root CA generated" || echo "Root CA may already exist, skipping"
 
+echo "Exporting CA certificate..."
+vault read -field=certificate pki/cert/ca > /vault-ca/ca.crt
+echo "CA certificate written to /vault-ca/ca.crt"
+
+echo "Issuing EMQX server certificate..."
+vault write -format=json pki/issue/device common_name="emqx" ttl=8760h > /tmp/emqx_cert.json
+cat /tmp/emqx_cert.json | grep '"certificate"' | head -1 | cut -d'"' -f4 | sed 's/\\n/\n/g' > /vault-ca/server.crt
+cat /tmp/emqx_cert.json | grep '"private_key"' | head -1 | cut -d'"' -f4 | sed 's/\\n/\n/g' > /vault-ca/server.key
+echo "EMQX server certificate written to /vault-ca/server.crt and /vault-ca/server.key"
+
 echo "Configuring PKI URLs..."
 vault write pki/config/urls \
   issuing_certificates="$VAULT_ADDR/v1/pki/ca" \

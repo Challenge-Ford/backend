@@ -11,6 +11,8 @@ build/
 *.out
 coverage.out
 
+__debug_bin*
+
 go.work
 go.work.sum
 
