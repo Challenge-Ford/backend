@@ -16,6 +16,14 @@
             "mode": "auto",
             "program": "${workspaceFolder}/cmd/cli",
             "cwd": "${workspaceFolder}/cmd/cli"
+        },
+        {
+            "name": "Worker",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/cmd/worker",
+            "cwd": "${workspaceFolder}/cmd/worker"
         }
     ]
 }

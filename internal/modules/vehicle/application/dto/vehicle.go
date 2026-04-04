@@ -20,16 +20,18 @@ type UpdateVehicleInput struct {
 }
 
 type VehicleOutput struct {
-	ID        string  `json:"id"`
-	CustomerID *string `json:"customerId"`
-	ModelID   string  `json:"modelId"`
-	ModelName string  `json:"modelName"`
-	Year      int     `json:"year"`
-	VIN       string  `json:"vin"`
-	Plate     string  `json:"plate"`
-	Color     string  `json:"color"`
-	CreatedAt string  `json:"createdAt"`
-	UpdatedAt string  `json:"updatedAt"`
+	ID          string  `json:"id"`
+	CustomerID  *string `json:"customerId"`
+	ModelID     string  `json:"modelId"`
+	ModelYearID string  `json:"modelYearId"`
+	ModelName   string  `json:"modelName"`
+	Year        int     `json:"year"`
+	ModelURL    *string `json:"modelUrl"`
+	VIN         string  `json:"vin"`
+	Plate       string  `json:"plate"`
+	Color       string  `json:"color"`
+	CreatedAt   string  `json:"createdAt"`
+	UpdatedAt   string  `json:"updatedAt"`
 }
 
 func ToVehicleOutput(v *vehicledomain.Vehicle) *VehicleOutput {
@@ -39,26 +41,31 @@ func ToVehicleOutput(v *vehicledomain.Vehicle) *VehicleOutput {
 		customerID = &s
 	}
 
-	var modelID, modelName string
+	var modelID, modelYearID, modelName string
 	var year int
+	var modelURL *string
 	if v.ModelYear != nil {
+		modelYearID = v.ModelYear.ID.String()
 		year = v.ModelYear.Year
 		modelID = v.ModelYear.ModelID.String()
+		modelURL = v.ModelYear.ModelURL
 		if v.ModelYear.Model != nil {
 			modelName = v.ModelYear.Model.Name
 		}
 	}
 
 	return &VehicleOutput{
-		ID:        v.ID.String(),
-		CustomerID: customerID,
-		ModelID:   modelID,
-		ModelName: modelName,
-		Year:      year,
-		VIN:       string(v.VIN),
-		Plate:     string(v.Plate),
-		Color:     string(v.Color),
-		CreatedAt: v.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
-		UpdatedAt: v.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		ID:          v.ID.String(),
+		CustomerID:  customerID,
+		ModelID:     modelID,
+		ModelYearID: modelYearID,
+		ModelName:   modelName,
+		Year:        year,
+		ModelURL:    modelURL,
+		VIN:        string(v.VIN),
+		Plate:      string(v.Plate),
+		Color:      string(v.Color),
+		CreatedAt:  v.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		UpdatedAt:  v.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
 }

@@ -20,9 +20,6 @@ services:
     image: oryd/oathkeeper:v0.40.8
     restart: unless-stopped
     command: serve --config /etc/config/oathkeeper/oathkeeper.yml
-    ports:
-      - "4455:4455"
-      - "4456:4456"
     volumes:
       - ./oathkeeper:/etc/config/oathkeeper:ro
     extra_hosts:
@@ -54,9 +51,6 @@ services:
     environment:
       DSN: postgres://torque:torque@postgres:5432/torque?sslmode=disable&search_path=kratos
       LOG_LEVEL: info
-    ports:
-      - "4433:4433"
-      - "4434:4434"
     volumes:
       - ./kratos:/etc/config/kratos:ro
     networks:
@@ -66,6 +60,29 @@ services:
         condition: service_completed_successfully
       postgres:
         condition: service_healthy
+
+  timescaledb:
+    image: timescale/timescaledb:latest-pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: torque
+      POSTGRES_PASSWORD: torque
+      POSTGRES_DB: torque
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -d torque -U torque
+      interval: 10s
+      timeout: 30s
+      retries: 10
+      start_period: 20s
+    volumes:
+      - timescaledb-data:/var/lib/postgresql/data:rw
+      - ./timescaledb/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - torque
 
   postgres:
     image: postgres:17.2-alpine
@@ -97,9 +114,7 @@ services:
     environment:
       MINIO_ROOT_USER: torque
       MINIO_ROOT_PASSWORD: torque123
-    ports:
-      - "9000:9000"
-      - "9001:9001"
+      MINIO_BROWSER_REDIRECT_URL: http://localhost/minio
     volumes:
       - minio-data:/data
     networks:
@@ -108,10 +123,45 @@ services:
   mailhog:
     image: mailhog/mailhog:latest
     restart: unless-stopped
-    ports:
-      - "8026:8025"
+    environment:
+      MH_UI_WEB_PATH: mailhog
     networks:
       - torque
+
+  vault:
+    image: hashicorp/vault:latest
+    restart: unless-stopped
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: torque
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+    cap_add:
+      - IPC_LOCK
+    ports:
+      - "8200:8200"
+    healthcheck:
+      test: ["CMD", "vault", "status", "-address=http://localhost:8200"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - torque
+
+  vault-setup:
+    image: hashicorp/vault:latest
+    restart: on-failure
+    environment:
+      VAULT_ADDR: http://vault:8200
+      VAULT_TOKEN: torque
+    volumes:
+      - ./vault/setup.sh:/setup.sh:ro
+      - vault-token:/vault-token
+    command: sh /setup.sh
+    networks:
+      - torque
+    depends_on:
+      vault:
+        condition: service_healthy
 
 networks:
   torque:
@@ -119,4 +169,6 @@ networks:
 
 volumes:
   postgres-data:
+  timescaledb-data:
   minio-data:
+  vault-token:

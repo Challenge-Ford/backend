@@ -10,6 +10,31 @@ http:
         - strip-assets
         - cors-assets
 
+    minio-console:
+      entryPoints:
+        - web
+      rule: "PathPrefix(`/minio`)"
+      priority: 10
+      service: minio-console
+      middlewares:
+        - strip-minio
+
+    mailhog:
+      entryPoints:
+        - web
+      rule: "PathPrefix(`/mailhog`)"
+      priority: 10
+      service: mailhog
+
+    vault:
+      entryPoints:
+        - web
+      rule: "PathPrefix(`/vault`)"
+      priority: 10
+      service: vault
+      middlewares:
+        - strip-vault
+
     gateway:
       entryPoints:
         - web
@@ -31,11 +56,36 @@ http:
         servers:
           - url: http://minio:9000
 
+    minio-console:
+      loadBalancer:
+        servers:
+          - url: http://minio:9001
+
+    mailhog:
+      loadBalancer:
+        servers:
+          - url: http://mailhog:8025
+
+    vault:
+      loadBalancer:
+        servers:
+          - url: http://vault:8200
+
   middlewares:
     strip-assets:
       stripPrefix:
         prefixes:
           - "/assets"
+
+    strip-minio:
+      stripPrefix:
+        prefixes:
+          - "/minio"
+
+    strip-vault:
+      stripPrefix:
+        prefixes:
+          - "/vault"
 
     rate-limit:
       rateLimit:

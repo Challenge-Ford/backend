@@ -13,7 +13,11 @@ import (
 	"torque/cmd/api/middleware"
 	"torque/internal/core/db"
 	"torque/internal/core/logger"
-	vehicleusecase "torque/internal/modules/vehicle/application/usecase"
+	"torque/internal/core/pki"
+	deviceusecase "torque/internal/modules/device/application/usecase"
+	devicedomain "torque/internal/modules/device/domain"
+	devicerepository "torque/internal/modules/device/infrastructure/repository"
+vehicleusecase "torque/internal/modules/vehicle/application/usecase"
 	vehicledomain "torque/internal/modules/vehicle/domain"
 	vehiclerepository "torque/internal/modules/vehicle/infrastructure/repository"
 )
@@ -43,8 +47,10 @@ func main() {
 	}
 	defer db.Close(conn)
 
-	if err := conn.Exec("CREATE SCHEMA IF NOT EXISTS vehicle").Error; err != nil {
-		log.Fatal("failed to create schema", zap.Error(err))
+	for _, schema := range []string{"vehicle", "device"} {
+		if err := conn.Exec("CREATE SCHEMA IF NOT EXISTS " + schema).Error; err != nil {
+			log.Fatal("failed to create schema", zap.String("schema", schema), zap.Error(err))
+		}
 	}
 
 	if err := db.Migrate(conn,
@@ -52,6 +58,7 @@ func main() {
 		&vehicledomain.VehicleModelYear{},
 		&vehicledomain.VehicleModelYearColor{},
 		&vehicledomain.Vehicle{},
+		&devicedomain.Device{},
 	); err != nil {
 		log.Fatal("migration failed", zap.Error(err))
 	}
@@ -67,8 +74,14 @@ func main() {
 		}
 	}
 
+vaultPKI, err := pki.NewVaultPKI(mustEnv("VAULT_ADDR"), mustEnv("VAULT_TOKEN"), "device")
+	if err != nil {
+		log.Fatal("failed to init vault pki client", zap.Error(err))
+	}
+
 	repo := vehiclerepository.NewGormRepository(conn)
 	modelRepo := vehiclerepository.NewGormModelRepository(conn)
+	deviceRepo := devicerepository.NewGormRepository(conn)
 
 	validate := validator.New()
 	validate.RegisterValidation("vin", func(fl validator.FieldLevel) bool {
@@ -77,13 +90,23 @@ func main() {
 	validate.RegisterValidation("plate", func(fl validator.FieldLevel) bool {
 		return vehicledomain.Plate(fl.Field().String()).Validate() == nil
 	})
+	validate.RegisterValidation("device_name", func(fl validator.FieldLevel) bool {
+		return devicedomain.DeviceName(fl.Field().String()).Validate() == nil
+	})
+
+	devices := handler.NewDeviceHandler(
+		deviceusecase.NewListDevices(deviceRepo),
+		deviceusecase.NewCreateDevice(deviceRepo, vaultPKI, validate),
+		deviceusecase.NewCommissionDevice(deviceRepo, repo, validate),
+		deviceusecase.NewDecommissionDevice(deviceRepo),
+	)
 
 	vehicles := handler.NewVehicleHandler(
 		vehicleusecase.NewCreateVehicle(repo, modelRepo, validate),
 		vehicleusecase.NewGetVehicle(repo),
 		vehicleusecase.NewListVehicles(repo),
 		vehicleusecase.NewUpdateVehicle(repo, modelRepo),
-		vehicleusecase.NewDeleteVehicle(repo),
+		vehicleusecase.NewDeleteVehicle(repo, deviceRepo),
 	)
 
 	vehicleModels := handler.NewVehicleModelHandler(
@@ -91,8 +114,15 @@ func main() {
 		vehicleusecase.NewListVehicleModelYears(modelRepo),
 	)
 
-	r := chi.NewRouter()
+r := chi.NewRouter()
 	r.Use(middleware.Auth)
+
+	r.Route("/devices", func(r chi.Router) {
+		r.Get("/", devices.List)
+		r.Post("/", devices.Create)
+		r.Post("/{id}/commission", devices.Commission)
+		r.Post("/{id}/decommission", devices.Decommission)
+	})
 
 	r.Route("/vehicles", func(r chi.Router) {
 		r.Get("/", vehicles.List)
@@ -107,7 +137,7 @@ func main() {
 		r.Get("/{id}/years", vehicleModels.ListYears)
 	})
 
-	port := mustEnv("PORT")
+port := mustEnv("PORT")
 	log.Info("starting HTTP server", zap.String("port", port))
 	if err := http.ListenAndServe(":"+port, r); err != nil {
 		log.Fatal("failed to serve", zap.Error(err))
