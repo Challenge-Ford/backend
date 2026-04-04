@@ -74,9 +74,14 @@ func main() {
 		}
 	}
 
-vaultPKI, err := pki.NewVaultPKI(mustEnv("VAULT_ADDR"), mustEnv("VAULT_TOKEN"), "device")
+stepPKI, err := pki.NewStepCAClient(
+		mustEnv("STEP_CA_URL"),
+		mustEnv("STEP_CA_PROVISIONER"),
+		mustEnv("STEP_CA_PROVISIONER_PASSWORD"),
+		mustEnv("STEP_CA_ROOT_CERT"),
+	)
 	if err != nil {
-		log.Fatal("failed to init vault pki client", zap.Error(err))
+		log.Fatal("failed to init step-ca pki client", zap.Error(err))
 	}
 
 	repo := vehiclerepository.NewGormRepository(conn)
@@ -96,7 +101,7 @@ vaultPKI, err := pki.NewVaultPKI(mustEnv("VAULT_ADDR"), mustEnv("VAULT_TOKEN"), 
 
 	devices := handler.NewDeviceHandler(
 		deviceusecase.NewListDevices(deviceRepo),
-		deviceusecase.NewCreateDevice(deviceRepo, vaultPKI, validate),
+		deviceusecase.NewCreateDevice(deviceRepo, stepPKI, validate),
 		deviceusecase.NewCommissionDevice(deviceRepo, repo, validate),
 		deviceusecase.NewDecommissionDevice(deviceRepo),
 	)
