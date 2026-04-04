@@ -123,24 +123,31 @@ echo "      mechanical@torque.dev (role: mechanical)"
 # ──────────────────────────────────────────────────────────────
 print_step "6/6  Issuing test device certificate and seeding Postgres"
 # ──────────────────────────────────────────────────────────────
-DEVICE_ID=$(cat /proc/sys/kernel/random/uuid 2>/dev/null || uuidgen | tr '[:upper:]' '[:lower:]')
+META="$CERTS_DIR/device/meta.json"
 
-issue_cert "$DEVICE_ID" "$CERTS_DIR/device/device.crt" "$CERTS_DIR/device/device.key"
-cp "$CERTS_DIR/ca.crt" "$CERTS_DIR/device/ca.crt"
+if [ -f "$META" ]; then
+  DEVICE_ID=$(grep -o '"device_id": *"[^"]*"' "$META" | cut -d'"' -f4)
+  echo "  ✓ device TRQ-1 already exists (ID: $DEVICE_ID), skipping"
+else
+  DEVICE_ID=$(cat /proc/sys/kernel/random/uuid 2>/dev/null || uuidgen | tr '[:upper:]' '[:lower:]')
 
-CERT_SN=$(openssl x509 -in "$CERTS_DIR/device/device.crt" -noout -serial 2>/dev/null \
-  | cut -d= -f2 | tr '[:upper:]' '[:lower:]' | sed 's/../&:/g;s/:$//')
+  issue_cert "$DEVICE_ID" "$CERTS_DIR/device/device.crt" "$CERTS_DIR/device/device.key"
+  cp "$CERTS_DIR/ca.crt" "$CERTS_DIR/device/ca.crt"
 
-psql_exec "
-  INSERT INTO device.devices (id, name, certificate_cn, certificate_sn)
-  VALUES ('$DEVICE_ID', 'TRQ-1', '$DEVICE_ID', '$CERT_SN')
-  ON CONFLICT (certificate_cn) DO NOTHING;
-"
+  CERT_SN=$(openssl x509 -in "$CERTS_DIR/device/device.crt" -noout -serial 2>/dev/null \
+    | cut -d= -f2 | tr '[:upper:]' '[:lower:]' | sed 's/../&:/g;s/:$//')
 
-printf '{\n  "device_id": "%s",\n  "certificate_sn": "%s"\n}\n' \
-  "$DEVICE_ID" "$CERT_SN" > "$CERTS_DIR/device/meta.json"
+  psql_exec "
+    INSERT INTO device.devices (id, name, certificate_cn, certificate_sn)
+    VALUES ('$DEVICE_ID', 'TRQ-1', '$DEVICE_ID', '$CERT_SN')
+    ON CONFLICT (certificate_cn) DO NOTHING;
+  "
 
-echo "  ✓ test device seeded (name: TRQ-1, CN: $DEVICE_ID)"
+  printf '{\n  "device_id": "%s",\n  "certificate_sn": "%s"\n}\n' \
+    "$DEVICE_ID" "$CERT_SN" > "$META"
+
+  echo "  ✓ test device seeded (name: TRQ-1, CN: $DEVICE_ID)"
+fi
 
 echo ""
 echo "══════════════════════════════════════════════════"
