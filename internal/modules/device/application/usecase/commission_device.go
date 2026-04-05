@@ -9,17 +9,16 @@ import (
 	"torque/internal/core/apperr"
 	devicedto "torque/internal/modules/device/application/dto"
 	devicedomain "torque/internal/modules/device/domain"
-	vehicledomain "torque/internal/modules/vehicle/domain"
 )
 
 type CommissionDeviceUseCase struct {
-	repo        devicedomain.Repository
-	vehicleRepo vehicledomain.Repository
-	validate    *validator.Validate
+	repo            devicedomain.Repository
+	vehicleResolver devicedomain.VehicleResolver
+	validate        *validator.Validate
 }
 
-func NewCommissionDevice(repo devicedomain.Repository, vehicleRepo vehicledomain.Repository, validate *validator.Validate) *CommissionDeviceUseCase {
-	return &CommissionDeviceUseCase{repo: repo, vehicleRepo: vehicleRepo, validate: validate}
+func NewCommissionDevice(repo devicedomain.Repository, vehicleResolver devicedomain.VehicleResolver, validate *validator.Validate) *CommissionDeviceUseCase {
+	return &CommissionDeviceUseCase{repo: repo, vehicleResolver: vehicleResolver, validate: validate}
 }
 
 func (uc *CommissionDeviceUseCase) Execute(ctx context.Context, id devicedomain.DeviceID, input devicedto.CommissionDeviceInput) (*devicedto.DeviceOutput, error) {
@@ -39,11 +38,11 @@ func (uc *CommissionDeviceUseCase) Execute(ctx context.Context, id devicedomain.
 
 	vehicleID := uuid.MustParse(input.VehicleID)
 
-	vehicle, err := uc.vehicleRepo.GetByID(ctx, vehicledomain.VehicleID(vehicleID))
+	exists, err := uc.vehicleResolver.Exists(ctx, vehicleID)
 	if err != nil {
 		return nil, apperr.Internal("failed to get vehicle", err)
 	}
-	if vehicle == nil {
+	if !exists {
 		return nil, apperr.NotFound("vehicle")
 	}
 

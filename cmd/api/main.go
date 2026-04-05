@@ -113,14 +113,14 @@ stepPKI, err := pki.NewStepCAClient(
 		return devicedomain.DeviceName(fl.Field().String()).Validate() == nil
 	})
 
+	vehicleResolver := adapters.NewVehicleResolver(repo)
+
 	devices := handler.NewDeviceHandler(
 		deviceusecase.NewListDevices(deviceRepo),
 		deviceusecase.NewCreateDevice(deviceRepo, stepPKI, validate),
-		deviceusecase.NewCommissionDevice(deviceRepo, repo, validate),
+		deviceusecase.NewCommissionDevice(deviceRepo, vehicleResolver, validate),
 		deviceusecase.NewDecommissionDevice(deviceRepo),
 	)
-
-	vehicleResolver := adapters.NewVehicleResolver(repo)
 
 	telemetry := handler.NewTelemetryHandler(
 		telemetryusecase.NewListTelemetry(telemetryRepo, vehicleResolver),

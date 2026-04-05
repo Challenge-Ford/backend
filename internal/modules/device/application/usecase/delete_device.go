@@ -8,16 +8,12 @@ import (
 	devicedomain "torque/internal/modules/device/domain"
 )
 
-type RevokeFunc interface {
-	Revoke(ctx context.Context, serialNumber string) error
-}
-
 type DeleteDeviceUseCase struct {
 	repo devicedomain.Repository
-	pki  RevokeFunc
+	pki  devicedomain.PKI
 }
 
-func NewDeleteDevice(repo devicedomain.Repository, pki RevokeFunc) *DeleteDeviceUseCase {
+func NewDeleteDevice(repo devicedomain.Repository, pki devicedomain.PKI) *DeleteDeviceUseCase {
 	return &DeleteDeviceUseCase{repo: repo, pki: pki}
 }
 

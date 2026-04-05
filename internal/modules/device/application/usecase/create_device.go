@@ -7,23 +7,17 @@ import (
 	"gorm.io/gorm"
 	"torque/internal/core/appctx"
 	"torque/internal/core/apperr"
-	"torque/internal/core/pki"
 	devicedto "torque/internal/modules/device/application/dto"
 	devicedomain "torque/internal/modules/device/domain"
 )
 
-type PKI interface {
-	Issue(ctx context.Context, commonName string) (*pki.IssuedCertificate, error)
-	Revoke(ctx context.Context, serialNumber string) error
-}
-
 type CreateDeviceUseCase struct {
 	repo     devicedomain.Repository
-	pki      PKI
+	pki      devicedomain.PKI
 	validate *validator.Validate
 }
 
-func NewCreateDevice(repo devicedomain.Repository, pki PKI, validate *validator.Validate) *CreateDeviceUseCase {
+func NewCreateDevice(repo devicedomain.Repository, pki devicedomain.PKI, validate *validator.Validate) *CreateDeviceUseCase {
 	return &CreateDeviceUseCase{repo: repo, pki: pki, validate: validate}
 }
 

@@ -26,3 +26,11 @@ func (a *VehicleResolverAdapter) GetVINByID(ctx context.Context, vehicleID uuid.
 	}
 	return string(vehicle.VIN), nil
 }
+
+func (a *VehicleResolverAdapter) Exists(ctx context.Context, vehicleID uuid.UUID) (bool, error) {
+	vehicle, err := a.repo.GetByID(ctx, vehicledomain.VehicleID(vehicleID))
+	if err != nil {
+		return false, fmt.Errorf("vehicle resolver: %w", err)
+	}
+	return vehicle != nil, nil
+}
