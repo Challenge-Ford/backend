@@ -5,32 +5,37 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	vehicledto "torque/internal/modules/vehicle/application/dto"
 	vehicledomain "torque/internal/modules/vehicle/domain"
 )
 
-type VehicleResolverAdapter struct {
-	repo vehicledomain.Repository
+type findVehicle interface {
+	Execute(ctx context.Context, id vehicledomain.VehicleID) (*vehicledto.VehicleOutput, error)
 }
 
-func NewVehicleResolver(repo vehicledomain.Repository) *VehicleResolverAdapter {
-	return &VehicleResolverAdapter{repo: repo}
+type VehicleResolverAdapter struct {
+	findVehicle findVehicle
+}
+
+func NewVehicleResolver(findVehicle findVehicle) *VehicleResolverAdapter {
+	return &VehicleResolverAdapter{findVehicle: findVehicle}
 }
 
 func (a *VehicleResolverAdapter) GetVINByID(ctx context.Context, vehicleID uuid.UUID) (string, error) {
-	vehicle, err := a.repo.GetByID(ctx, vehicledomain.VehicleID(vehicleID))
+	out, err := a.findVehicle.Execute(ctx, vehicledomain.VehicleID(vehicleID))
 	if err != nil {
 		return "", fmt.Errorf("vehicle resolver: %w", err)
 	}
-	if vehicle == nil {
+	if out == nil {
 		return "", nil
 	}
-	return string(vehicle.VIN), nil
+	return out.VIN, nil
 }
 
 func (a *VehicleResolverAdapter) Exists(ctx context.Context, vehicleID uuid.UUID) (bool, error) {
-	vehicle, err := a.repo.GetByID(ctx, vehicledomain.VehicleID(vehicleID))
+	out, err := a.findVehicle.Execute(ctx, vehicledomain.VehicleID(vehicleID))
 	if err != nil {
 		return false, fmt.Errorf("vehicle resolver: %w", err)
 	}
-	return vehicle != nil, nil
+	return out != nil, nil
 }

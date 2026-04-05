@@ -6,17 +6,16 @@ import (
 	"github.com/google/uuid"
 	"torque/internal/core/apperr"
 	"torque/internal/core/appctx"
-	devicedomain "torque/internal/modules/device/domain"
 	vehicledomain "torque/internal/modules/vehicle/domain"
 )
 
 type DeleteVehicleUseCase struct {
-	repo       vehicledomain.Repository
-	deviceRepo devicedomain.Repository
+	repo           vehicledomain.Repository
+	deviceResolver vehicledomain.DeviceResolver
 }
 
-func NewDeleteVehicle(repo vehicledomain.Repository, deviceRepo devicedomain.Repository) *DeleteVehicleUseCase {
-	return &DeleteVehicleUseCase{repo: repo, deviceRepo: deviceRepo}
+func NewDeleteVehicle(repo vehicledomain.Repository, deviceResolver vehicledomain.DeviceResolver) *DeleteVehicleUseCase {
+	return &DeleteVehicleUseCase{repo: repo, deviceResolver: deviceResolver}
 }
 
 func (uc *DeleteVehicleUseCase) Execute(ctx context.Context, id vehicledomain.VehicleID) error {
@@ -30,11 +29,11 @@ func (uc *DeleteVehicleUseCase) Execute(ctx context.Context, id vehicledomain.Ve
 		return apperr.NotFound("vehicle")
 	}
 
-	device, err := uc.deviceRepo.GetByVehicleID(ctx, uuid.UUID(id))
+	hasDevice, err := uc.deviceResolver.HasCommissioned(ctx, uuid.UUID(id))
 	if err != nil {
 		return apperr.Internal("failed to check commissioned device", err)
 	}
-	if device != nil {
+	if hasDevice {
 		return apperr.Conflict("vehicle has a commissioned device and cannot be deleted")
 	}
 

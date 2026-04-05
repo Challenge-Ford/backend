@@ -21,3 +21,12 @@ packages:
       DTCRepository:
       DeviceResolver:
       VehicleResolver:
+  torque/internal/modules/vehicle/domain:
+    config:
+      dir: "mocks/vehicle/domain"
+      outpkg: "mockvehicle"
+    interfaces:
+      Repository:
+      ModelRepository:
+      DeviceResolver:
+      TelemetryResolver:

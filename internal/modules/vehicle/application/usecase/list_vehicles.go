@@ -5,18 +5,17 @@ import (
 
 	"torque/internal/core/apperr"
 	"torque/internal/core/pagination"
-	telemetrydomain "torque/internal/modules/telemetry/domain"
 	vehicledto "torque/internal/modules/vehicle/application/dto"
 	vehicledomain "torque/internal/modules/vehicle/domain"
 )
 
 type ListVehiclesUseCase struct {
-	repo    vehicledomain.Repository
-	dtcRepo telemetrydomain.DTCRepository
+	repo              vehicledomain.Repository
+	telemetryResolver vehicledomain.TelemetryResolver
 }
 
-func NewListVehicles(repo vehicledomain.Repository, dtcRepo telemetrydomain.DTCRepository) *ListVehiclesUseCase {
-	return &ListVehiclesUseCase{repo: repo, dtcRepo: dtcRepo}
+func NewListVehicles(repo vehicledomain.Repository, telemetryResolver vehicledomain.TelemetryResolver) *ListVehiclesUseCase {
+	return &ListVehiclesUseCase{repo: repo, telemetryResolver: telemetryResolver}
 }
 
 func (uc *ListVehiclesUseCase) Execute(ctx context.Context, page pagination.Page) (*pagination.Result[*vehicledto.VehicleOutput], error) {
@@ -32,7 +31,7 @@ func (uc *ListVehiclesUseCase) Execute(ctx context.Context, page pagination.Page
 		vins[i] = string(v.VIN)
 	}
 
-	dtcMap, err := uc.dtcRepo.HasActiveDTCs(ctx, vins)
+	dtcMap, err := uc.telemetryResolver.HasActiveDTCs(ctx, vins)
 	if err != nil {
 		return nil, apperr.Internal("failed to check active dtcs", err)
 	}

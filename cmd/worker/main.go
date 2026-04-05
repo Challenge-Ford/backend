@@ -19,6 +19,7 @@ import (
 	telemetrydto "torque/internal/modules/telemetry/application/dto"
 	telemetryusecase "torque/internal/modules/telemetry/application/usecase"
 	devicerepository "torque/internal/modules/device/infrastructure/repository"
+	deviceusecase "torque/internal/modules/device/application/usecase"
 	telemetryrepository "torque/internal/modules/telemetry/infrastructure/repository"
 )
 
@@ -85,7 +86,9 @@ func main() {
 	deviceRepo := devicerepository.NewGormRepository(mainConn)
 	telemetryRepo := telemetryrepository.NewPgxRepository(tsPool)
 	dtcRepo := telemetryrepository.NewPgxDTCRepository(tsPool)
-	deviceResolver := adapters.NewDeviceResolver(deviceRepo)
+	findCommissionedByVIN := deviceusecase.NewFindCommissionedByVIN(deviceRepo)
+	findDeviceByVehicle := deviceusecase.NewFindDeviceByVehicle(deviceRepo)
+	deviceResolver := adapters.NewDeviceResolver(findCommissionedByVIN, findDeviceByVehicle)
 
 	recordTelemetry := telemetryusecase.NewRecordTelemetry(telemetryRepo, deviceResolver)
 	recordDTC := telemetryusecase.NewRecordDTC(dtcRepo, deviceResolver)

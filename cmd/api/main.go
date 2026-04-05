@@ -113,7 +113,14 @@ stepPKI, err := pki.NewStepCAClient(
 		return devicedomain.DeviceName(fl.Field().String()).Validate() == nil
 	})
 
-	vehicleResolver := adapters.NewVehicleResolver(repo)
+	findVehicle := vehicleusecase.NewFindVehicle(repo)
+	findCommissionedByVIN := deviceusecase.NewFindCommissionedByVIN(deviceRepo)
+	findDeviceByVehicle := deviceusecase.NewFindDeviceByVehicle(deviceRepo)
+	checkActiveDTCs := telemetryusecase.NewCheckActiveDTCs(dtcRepo)
+
+	vehicleResolver := adapters.NewVehicleResolver(findVehicle)
+	deviceResolver := adapters.NewDeviceResolver(findCommissionedByVIN, findDeviceByVehicle)
+	telemetryResolver := adapters.NewTelemetryResolver(checkActiveDTCs)
 
 	devices := handler.NewDeviceHandler(
 		deviceusecase.NewListDevices(deviceRepo),
@@ -129,10 +136,10 @@ stepPKI, err := pki.NewStepCAClient(
 
 	vehicles := handler.NewVehicleHandler(
 		vehicleusecase.NewCreateVehicle(repo, modelRepo, validate),
-		vehicleusecase.NewGetVehicle(repo, dtcRepo),
-		vehicleusecase.NewListVehicles(repo, dtcRepo),
+		vehicleusecase.NewGetVehicle(repo, telemetryResolver),
+		vehicleusecase.NewListVehicles(repo, telemetryResolver),
 		vehicleusecase.NewUpdateVehicle(repo, modelRepo),
-		vehicleusecase.NewDeleteVehicle(repo, deviceRepo),
+		vehicleusecase.NewDeleteVehicle(repo, deviceResolver),
 	)
 
 	vehicleModels := handler.NewVehicleModelHandler(
