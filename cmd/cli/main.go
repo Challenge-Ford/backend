@@ -11,6 +11,8 @@ import (
 
 	"github.com/joho/godotenv"
 	amqp "github.com/rabbitmq/amqp091-go"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 	"torque/internal/infrastructure/messaging"
 )
 
@@ -50,7 +52,8 @@ func publish(ch *amqp.Channel, queue string, v any) error {
 func dial() (*amqp.Connection, *amqp.Channel, error) {
 	url := os.Getenv("RABBITMQ_URL")
 	if url == "" {
-		url = "amqp://torque:torque@localhost:5672/"
+		fmt.Fprintln(os.Stderr, "error: RABBITMQ_URL is not set")
+		os.Exit(1)
 	}
 	conn, err := amqp.Dial(url)
 	if err != nil {
@@ -78,9 +81,31 @@ commands:
   telemetry   publish a single telemetry event
   dtc         publish a DTC event
   simulate    publish a simulated drive session
+  reset       truncate all telemetry data from the database
 
 Run "cli <command> -h" for flags.`)
 	os.Exit(1)
+}
+
+func runReset(_ []string) {
+	dsn := os.Getenv("TIMESERIES_DATABASE_URL")
+	if dsn == "" {
+		fmt.Fprintln(os.Stderr, "error: TIMESERIES_DATABASE_URL is not set")
+		os.Exit(1)
+	}
+
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error: failed to connect to database:", err)
+		os.Exit(1)
+	}
+
+	if err := db.Exec("TRUNCATE TABLE telemetry.entries, telemetry.active_dtcs").Error; err != nil {
+		fmt.Fprintln(os.Stderr, "error:", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("telemetry data cleared")
 }
 
 // ── telemetry ──────────────────────────────────────────────────────────────
@@ -441,6 +466,8 @@ func main() {
 		runDTC(os.Args[2:])
 	case "simulate":
 		runSimulate(os.Args[2:])
+	case "reset":
+		runReset(os.Args[2:])
 	default:
 		usage()
 	}

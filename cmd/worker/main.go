@@ -8,17 +8,16 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 	"torque/internal/core/db"
 	"torque/internal/core/logger"
 	devicerepository "torque/internal/modules/device/infrastructure/repository"
 	"torque/internal/infrastructure/messaging"
 	telemetrydto "torque/internal/modules/telemetry/application/dto"
 	telemetryusecase "torque/internal/modules/telemetry/application/usecase"
-	telemetrydomain "torque/internal/modules/telemetry/domain"
 	telemetryrepository "torque/internal/modules/telemetry/infrastructure/repository"
 )
 
@@ -46,19 +45,21 @@ func main() {
 	}
 	defer log.Sync()
 
+	ctx := context.Background()
+
 	mainConn, err := db.Connect(mustEnv("DATABASE_URL"))
 	if err != nil {
 		log.Fatal("failed to connect to database", zap.Error(err))
 	}
 	defer db.Close(mainConn)
 
-	tsConn, err := db.Connect(mustEnv("TIMESERIES_DATABASE_URL"))
+	tsPool, err := db.ConnectPgx(ctx, mustEnv("TIMESERIES_DATABASE_URL"))
 	if err != nil {
 		log.Fatal("failed to connect to timescaledb", zap.Error(err))
 	}
-	defer db.Close(tsConn)
+	defer tsPool.Close()
 
-	if err := migrate(tsConn); err != nil {
+	if err := migrate(ctx, tsPool); err != nil {
 		log.Fatal("migration failed", zap.Error(err))
 	}
 
@@ -81,8 +82,8 @@ func main() {
 	}
 
 	deviceRepo := devicerepository.NewGormRepository(mainConn)
-	telemetryRepo := telemetryrepository.NewGormRepository(tsConn)
-	dtcRepo := telemetryrepository.NewGormDTCRepository(tsConn)
+	telemetryRepo := telemetryrepository.NewPgxRepository(tsPool)
+	dtcRepo := telemetryrepository.NewPgxDTCRepository(tsPool)
 
 	recordTelemetry := telemetryusecase.NewRecordTelemetry(telemetryRepo, deviceRepo)
 	recordDTC := telemetryusecase.NewRecordDTC(dtcRepo, deviceRepo)
@@ -103,13 +104,10 @@ func main() {
 	log.Info("shutting down")
 }
 
-func migrate(tsConn *gorm.DB) error {
-	if err := tsConn.Exec("CREATE SCHEMA IF NOT EXISTS telemetry").Error; err != nil {
-		return err
-	}
-
-	if err := tsConn.Exec(`
-		CREATE TABLE IF NOT EXISTS telemetry.entries (
+func migrate(ctx context.Context, pool *pgxpool.Pool) error {
+	statements := []string{
+		`CREATE SCHEMA IF NOT EXISTS telemetry`,
+		`CREATE TABLE IF NOT EXISTS telemetry.entries (
 			time            TIMESTAMPTZ      NOT NULL,
 			device_id       UUID             NOT NULL,
 			vin             TEXT             NOT NULL,
@@ -131,18 +129,24 @@ func migrate(tsConn *gorm.DB) error {
 			maf             DOUBLE PRECISION,
 			battery_voltage DOUBLE PRECISION,
 			PRIMARY KEY (time, device_id)
-		)
-	`).Error; err != nil {
-		return err
+		)`,
+		`SELECT create_hypertable('telemetry.entries', 'time', if_not_exists => true)`,
+		`CREATE INDEX IF NOT EXISTS idx_telemetry_entries_vin_time ON telemetry.entries (vin, time DESC)`,
+		`CREATE TABLE IF NOT EXISTS telemetry.active_dtcs (
+			device_id   UUID        NOT NULL,
+			vin         TEXT        NOT NULL,
+			code        TEXT        NOT NULL,
+			detected_at TIMESTAMPTZ NOT NULL,
+			PRIMARY KEY (device_id, code)
+		)`,
 	}
 
-	if err := tsConn.Exec(`
-		SELECT create_hypertable('telemetry.entries', 'time', if_not_exists => true)
-	`).Error; err != nil {
-		return err
+	for _, sql := range statements {
+		if _, err := pool.Exec(ctx, sql); err != nil {
+			return fmt.Errorf("migration failed: %w", err)
+		}
 	}
-
-	return db.Migrate(tsConn, &telemetrydomain.ActiveDTC{})
+	return nil
 }
 
 func consume(log *zap.Logger, ch *amqp.Channel, queue string, handle func([]byte) error) {
@@ -163,7 +167,6 @@ func consume(log *zap.Logger, ch *amqp.Channel, queue string, handle func([]byte
 		}
 	}
 }
-
 
 func handleTelemetry(body []byte, uc *telemetryusecase.RecordTelemetryUseCase) error {
 	var msg messaging.TelemetryMessage

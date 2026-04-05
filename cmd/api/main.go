@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -43,17 +44,19 @@ func main() {
 	}
 	defer log.Sync()
 
+	ctx := context.Background()
+
 	conn, err := db.Connect(mustEnv("DATABASE_URL"))
 	if err != nil {
 		log.Fatal("failed to connect to database", zap.Error(err))
 	}
 	defer db.Close(conn)
 
-	tsConn, err := db.Connect(mustEnv("TIMESERIES_DATABASE_URL"))
+	tsPool, err := db.ConnectPgx(ctx, mustEnv("TIMESERIES_DATABASE_URL"))
 	if err != nil {
 		log.Fatal("failed to connect to timescaledb", zap.Error(err))
 	}
-	defer db.Close(tsConn)
+	defer tsPool.Close()
 
 	for _, schema := range []string{"vehicle", "device"} {
 		if err := conn.Exec("CREATE SCHEMA IF NOT EXISTS " + schema).Error; err != nil {
@@ -95,8 +98,8 @@ stepPKI, err := pki.NewStepCAClient(
 	repo := vehiclerepository.NewGormRepository(conn)
 	modelRepo := vehiclerepository.NewGormModelRepository(conn)
 	deviceRepo := devicerepository.NewGormRepository(conn)
-	telemetryRepo := telemetryrepository.NewGormRepository(tsConn)
-	dtcRepo := telemetryrepository.NewGormDTCRepository(tsConn)
+	telemetryRepo := telemetryrepository.NewPgxRepository(tsPool)
+	dtcRepo := telemetryrepository.NewPgxDTCRepository(tsPool)
 
 	validate := validator.New()
 	validate.RegisterValidation("vin", func(fl validator.FieldLevel) bool {

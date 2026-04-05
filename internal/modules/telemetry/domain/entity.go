@@ -34,13 +34,24 @@ func (TelemetryEntry) TableName() string { return "telemetry.entries" }
 // ActiveDTC represents a fault code currently present on a vehicle.
 // Keyed by (device_id, code) — one row per active code per device.
 type ActiveDTC struct {
-	DeviceID   uuid.UUID `gorm:"type:uuid;primaryKey"`
-	VIN        string    `gorm:"not null"`
-	Code       string    `gorm:"primaryKey"`
-	DetectedAt time.Time `gorm:"not null"`
+	DeviceID   uuid.UUID
+	VIN        string
+	Code       string
+	DetectedAt time.Time
+	closed     bool
 }
 
-func (ActiveDTC) TableName() string { return "telemetry.active_dtcs" }
+func NewActiveDTC(deviceID uuid.UUID, vin, code string, at time.Time) *ActiveDTC {
+	return &ActiveDTC{DeviceID: deviceID, VIN: vin, Code: code, DetectedAt: at}
+}
+
+func (d *ActiveDTC) Close() {
+	d.closed = true
+}
+
+func (d *ActiveDTC) IsClosed() bool {
+	return d.closed
+}
 
 type TelemetrySummary struct {
 	Bucket            time.Time

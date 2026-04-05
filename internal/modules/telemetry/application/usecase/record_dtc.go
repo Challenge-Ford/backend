@@ -33,8 +33,10 @@ func (uc *RecordDTCUseCase) Execute(ctx context.Context, input telemetrydto.Reco
 		return apperr.NotFound("commissioned device for vin " + input.VIN)
 	}
 
-	if input.Status == "opened" {
-		return uc.repo.SetActive(ctx, uuid.UUID(device.ID), input.VIN, input.Code, time.Now().UTC())
+	dtc := telemetrydomain.NewActiveDTC(uuid.UUID(device.ID), input.VIN, input.Code, time.Now().UTC())
+	if input.Status == "closed" {
+		dtc.Close()
 	}
-	return uc.repo.SetInactive(ctx, uuid.UUID(device.ID), input.Code)
+
+	return uc.repo.Save(ctx, dtc)
 }

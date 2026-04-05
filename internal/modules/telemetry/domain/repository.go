@@ -3,8 +3,6 @@ package telemetrydomain
 import (
 	"context"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 type Repository interface {
@@ -15,8 +13,7 @@ type Repository interface {
 }
 
 type DTCRepository interface {
-	SetActive(ctx context.Context, deviceID uuid.UUID, vin, code string, at time.Time) error
-	SetInactive(ctx context.Context, deviceID uuid.UUID, code string) error
+	Save(ctx context.Context, dtc *ActiveDTC) error
 	ListActive(ctx context.Context, vin string) ([]*ActiveDTC, error)
 	HasActiveDTCs(ctx context.Context, vins []string) (map[string]bool, error)
 }
