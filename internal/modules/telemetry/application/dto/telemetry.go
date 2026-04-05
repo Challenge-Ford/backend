@@ -79,8 +79,8 @@ type TelemetrySummaryOutput struct {
 }
 
 type DTCOutput struct {
-	Code       string    `json:"code"`
-	DetectedAt time.Time `json:"detectedAt"`
+	Code   string    `json:"code"`
+	Time   time.Time `json:"time"`
 }
 
 type DTCListOutput struct {

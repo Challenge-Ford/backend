@@ -30,10 +30,11 @@ func (uc *RecordDTCUseCase) Execute(ctx context.Context, input telemetrydto.Reco
 		return apperr.NotFound("commissioned device for vin " + input.VIN)
 	}
 
-	dtc := telemetrydomain.NewActiveDTC(device.ID, input.VIN, input.Code, input.Time.UTC())
-	if input.Status == "closed" {
-		dtc.Close()
-	}
-
-	return uc.repo.Save(ctx, dtc)
+	return uc.repo.Insert(ctx, &telemetrydomain.DTCEntry{
+		Time:     input.Time.UTC(),
+		DeviceID: device.ID,
+		VIN:      input.VIN,
+		Code:     input.Code,
+		Status:   input.Status,
+	})
 }

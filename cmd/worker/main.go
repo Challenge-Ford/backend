@@ -108,8 +108,7 @@ func main() {
 
 func migrate(ctx context.Context, pool *pgxpool.Pool) error {
 	statements := []string{
-		`CREATE SCHEMA IF NOT EXISTS telemetry`,
-		`CREATE TABLE IF NOT EXISTS telemetry.entries (
+		`CREATE TABLE IF NOT EXISTS telemetry_entries (
 			time            TIMESTAMPTZ      NOT NULL,
 			device_id       UUID             NOT NULL,
 			vin             TEXT             NOT NULL,
@@ -132,15 +131,17 @@ func migrate(ctx context.Context, pool *pgxpool.Pool) error {
 			battery_voltage DOUBLE PRECISION,
 			PRIMARY KEY (time, device_id)
 		)`,
-		`SELECT create_hypertable('telemetry.entries', 'time', if_not_exists => true)`,
-		`CREATE INDEX IF NOT EXISTS idx_telemetry_entries_vin_time ON telemetry.entries (vin, time DESC)`,
-		`CREATE TABLE IF NOT EXISTS telemetry.active_dtcs (
-			device_id   UUID        NOT NULL,
-			vin         TEXT        NOT NULL,
-			code        TEXT        NOT NULL,
-			detected_at TIMESTAMPTZ NOT NULL,
-			PRIMARY KEY (device_id, code)
+		`SELECT create_hypertable('telemetry_entries', 'time', if_not_exists => true)`,
+		`CREATE INDEX IF NOT EXISTS idx_telemetry_entries_vin_time ON telemetry_entries (vin, time DESC)`,
+		`CREATE TABLE IF NOT EXISTS dtc_entries (
+			time      TIMESTAMPTZ NOT NULL,
+			device_id UUID        NOT NULL,
+			vin       TEXT        NOT NULL,
+			code      TEXT        NOT NULL,
+			status    TEXT        NOT NULL
 		)`,
+		`SELECT create_hypertable('dtc_entries', 'time', if_not_exists => true)`,
+		`CREATE INDEX IF NOT EXISTS idx_dtc_entries_vin_code_time ON dtc_entries (vin, code, time DESC)`,
 	}
 
 	for _, sql := range statements {

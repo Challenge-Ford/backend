@@ -24,7 +24,7 @@ func NewPgxRepository(pool *pgxpool.Pool) *PgxRepository {
 
 func (r *PgxRepository) Insert(ctx context.Context, e *telemetrydomain.TelemetryEntry) error {
 	_, err := r.pool.Exec(ctx, `
-		INSERT INTO telemetry.entries (
+		INSERT INTO telemetry_entries (
 			time, device_id, vin,
 			lat, lng, alt, gps_speed, heading, hdop,
 			rpm, speed, coolant_temp, intake_temp, engine_load,
@@ -46,7 +46,7 @@ func (r *PgxRepository) Insert(ctx context.Context, e *telemetrydomain.Telemetry
 func (r *PgxRepository) Latest(ctx context.Context, vin string) (*telemetrydomain.TelemetryEntry, error) {
 	row := r.pool.QueryRow(ctx, `
 		SELECT `+selectFields+`
-		FROM telemetry.entries
+		FROM telemetry_entries
 		WHERE vin = $1
 		ORDER BY time DESC
 		LIMIT 1`, vin)
@@ -62,7 +62,7 @@ func (r *PgxRepository) List(ctx context.Context, vin string, from, to time.Time
 	args := []any{vin, from, to, limit}
 	q := `
 		SELECT ` + selectFields + `
-		FROM telemetry.entries
+		FROM telemetry_entries
 		WHERE vin = $1 AND time >= $2 AND time <= $3`
 
 	if after != nil {
@@ -101,7 +101,7 @@ func (r *PgxRepository) Summary(ctx context.Context, vin string, from, to time.T
 			AVG(engine_load)            AS avg_engine_load,
 			AVG(maf)                    AS avg_maf,
 			AVG(battery_voltage)        AS avg_battery_voltage
-		FROM telemetry.entries
+		FROM telemetry_entries
 		WHERE vin = $2 AND time >= $3 AND time <= $4
 		GROUP BY bucket
 		ORDER BY bucket ASC`,

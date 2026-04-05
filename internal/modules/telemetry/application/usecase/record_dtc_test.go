@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -20,35 +21,36 @@ func TestRecordDTC_Execute(t *testing.T) {
 	ctx := context.Background()
 	vin := "ASD21W31231244521"
 	deviceID := uuid.New()
+	ts := time.Now().UTC().Truncate(time.Second)
 
 	resolvedDevice := &telemetrydomain.ResolvedDevice{ID: deviceID, VIN: vin}
 
-	t.Run("saves open DTC when status is opened", func(t *testing.T) {
+	t.Run("inserts opened entry", func(t *testing.T) {
 		repo := mocktelemetry.NewMockDTCRepository(t)
 		resolver := mocktelemetry.NewMockDeviceResolver(t)
 
 		resolver.EXPECT().GetCommissionedByVIN(ctx, vin).Return(resolvedDevice, nil)
-		repo.EXPECT().Save(ctx, mock.MatchedBy(func(dtc *telemetrydomain.ActiveDTC) bool {
-			return dtc.Code == "P0300" && dtc.VIN == vin && !dtc.IsClosed()
+		repo.EXPECT().Insert(ctx, mock.MatchedBy(func(e *telemetrydomain.DTCEntry) bool {
+			return e.Code == "P0300" && e.Status == "opened" && e.VIN == vin && e.DeviceID == deviceID
 		})).Return(nil)
 
 		uc := telemetryusecase.NewRecordDTC(repo, resolver)
-		err := uc.Execute(ctx, telemetrydto.RecordDTCInput{VIN: vin, Code: "P0300", Status: "opened"})
+		err := uc.Execute(ctx, telemetrydto.RecordDTCInput{VIN: vin, Code: "P0300", Status: "opened", Time: ts})
 
 		require.NoError(t, err)
 	})
 
-	t.Run("saves closed DTC when status is closed", func(t *testing.T) {
+	t.Run("inserts closed entry", func(t *testing.T) {
 		repo := mocktelemetry.NewMockDTCRepository(t)
 		resolver := mocktelemetry.NewMockDeviceResolver(t)
 
 		resolver.EXPECT().GetCommissionedByVIN(ctx, vin).Return(resolvedDevice, nil)
-		repo.EXPECT().Save(ctx, mock.MatchedBy(func(dtc *telemetrydomain.ActiveDTC) bool {
-			return dtc.Code == "P0300" && dtc.IsClosed()
+		repo.EXPECT().Insert(ctx, mock.MatchedBy(func(e *telemetrydomain.DTCEntry) bool {
+			return e.Code == "P0300" && e.Status == "closed"
 		})).Return(nil)
 
 		uc := telemetryusecase.NewRecordDTC(repo, resolver)
-		err := uc.Execute(ctx, telemetrydto.RecordDTCInput{VIN: vin, Code: "P0300", Status: "closed"})
+		err := uc.Execute(ctx, telemetrydto.RecordDTCInput{VIN: vin, Code: "P0300", Status: "closed", Time: ts})
 
 		require.NoError(t, err)
 	})

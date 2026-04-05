@@ -13,9 +13,9 @@ type Repository interface {
 	Summary(ctx context.Context, vin string, from, to time.Time, bucket string) ([]*TelemetrySummary, error)
 }
 
-// DTCRepository is the driven port for persisting DTC records.
+// DTCRepository is the driven port for persisting DTC entries.
 type DTCRepository interface {
-	Save(ctx context.Context, dtc *ActiveDTC) error
-	ListActive(ctx context.Context, vin string) ([]*ActiveDTC, error)
+	Insert(ctx context.Context, entry *DTCEntry) error
+	ListActive(ctx context.Context, vin string) ([]*DTCEntry, error)
 	HasActiveDTCs(ctx context.Context, vins []string) (map[string]bool, error)
 }

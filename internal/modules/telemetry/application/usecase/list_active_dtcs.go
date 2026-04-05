@@ -35,8 +35,8 @@ func (uc *ListActiveDTCsUseCase) Execute(ctx context.Context, vehicleID uuid.UUI
 	out := make([]*telemetrydto.DTCOutput, len(dtcs))
 	for i, d := range dtcs {
 		out[i] = &telemetrydto.DTCOutput{
-			Code:       d.Code,
-			DetectedAt: d.DetectedAt,
+			Code: d.Code,
+			Time: d.Time,
 		}
 	}
 	return &telemetrydto.DTCListOutput{Data: out}, nil

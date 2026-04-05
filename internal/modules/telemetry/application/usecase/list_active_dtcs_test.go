@@ -25,9 +25,9 @@ func TestListActiveDTCs_Execute(t *testing.T) {
 		resolver := mocktelemetry.NewMockVehicleResolver(t)
 
 		now := time.Now().UTC()
-		dtcs := []*telemetrydomain.ActiveDTC{
-			{DeviceID: uuid.New(), VIN: vin, Code: "P0300", DetectedAt: now},
-			{DeviceID: uuid.New(), VIN: vin, Code: "P0420", DetectedAt: now.Add(-time.Hour)},
+		dtcs := []*telemetrydomain.DTCEntry{
+			{Time: now, DeviceID: uuid.New(), VIN: vin, Code: "P0300", Status: "opened"},
+			{Time: now.Add(-time.Hour), DeviceID: uuid.New(), VIN: vin, Code: "P0420", Status: "opened"},
 		}
 
 		resolver.EXPECT().GetVINByID(ctx, vehicleID).Return(vin, nil)

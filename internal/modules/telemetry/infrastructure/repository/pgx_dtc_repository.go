@@ -3,7 +3,6 @@ package telemetryrepository
 import (
 	"context"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	telemetrydomain "torque/internal/modules/telemetry/domain"
 )
@@ -16,54 +15,53 @@ func NewPgxDTCRepository(pool *pgxpool.Pool) *PgxDTCRepository {
 	return &PgxDTCRepository{pool: pool}
 }
 
-func (r *PgxDTCRepository) Save(ctx context.Context, dtc *telemetrydomain.ActiveDTC) error {
-	if dtc.IsClosed() {
-		_, err := r.pool.Exec(ctx,
-			`DELETE FROM telemetry.active_dtcs WHERE device_id = $1 AND code = $2`,
-			dtc.DeviceID, dtc.Code,
-		)
-		return err
-	}
-	_, err := r.pool.Exec(ctx, `
-		INSERT INTO telemetry.active_dtcs (device_id, vin, code, detected_at)
-		VALUES ($1, $2, $3, $4)
-		ON CONFLICT (device_id, code) DO UPDATE SET vin = EXCLUDED.vin, detected_at = EXCLUDED.detected_at`,
-		dtc.DeviceID, dtc.VIN, dtc.Code, dtc.DetectedAt,
+func (r *PgxDTCRepository) Insert(ctx context.Context, entry *telemetrydomain.DTCEntry) error {
+	_, err := r.pool.Exec(ctx,
+		`INSERT INTO dtc_entries (time, device_id, vin, code, status) VALUES ($1, $2, $3, $4, $5)`,
+		entry.Time, entry.DeviceID, entry.VIN, entry.Code, entry.Status,
 	)
 	return err
 }
 
-func (r *PgxDTCRepository) ListActive(ctx context.Context, vin string) ([]*telemetrydomain.ActiveDTC, error) {
-	rows, err := r.pool.Query(ctx,
-		`SELECT device_id, vin, code, detected_at FROM telemetry.active_dtcs WHERE vin = $1 ORDER BY detected_at DESC`,
-		vin,
-	)
+func (r *PgxDTCRepository) ListActive(ctx context.Context, vin string) ([]*telemetrydomain.DTCEntry, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT DISTINCT ON (code) time, device_id, vin, code, status
+		FROM dtc_entries
+		WHERE vin = $1
+		ORDER BY code, time DESC
+	`, vin)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var dtcs []*telemetrydomain.ActiveDTC
+	var entries []*telemetrydomain.DTCEntry
 	for rows.Next() {
-		var deviceID uuid.UUID
-		d := &telemetrydomain.ActiveDTC{}
-		if err := rows.Scan(&deviceID, &d.VIN, &d.Code, &d.DetectedAt); err != nil {
+		e := &telemetrydomain.DTCEntry{}
+		if err := rows.Scan(&e.Time, &e.DeviceID, &e.VIN, &e.Code, &e.Status); err != nil {
 			return nil, err
 		}
-		d.DeviceID = deviceID
-		dtcs = append(dtcs, d)
+		if e.Status == "opened" {
+			entries = append(entries, e)
+		}
 	}
-	return dtcs, rows.Err()
+	return entries, rows.Err()
 }
 
 func (r *PgxDTCRepository) HasActiveDTCs(ctx context.Context, vins []string) (map[string]bool, error) {
 	if len(vins) == 0 {
 		return map[string]bool{}, nil
 	}
-	rows, err := r.pool.Query(ctx,
-		`SELECT DISTINCT vin FROM telemetry.active_dtcs WHERE vin = ANY($1)`,
-		vins,
-	)
+	rows, err := r.pool.Query(ctx, `
+		SELECT vin, status
+		FROM (
+			SELECT DISTINCT ON (vin, code) vin, status
+			FROM dtc_entries
+			WHERE vin = ANY($1)
+			ORDER BY vin, code, time DESC
+		) latest
+		WHERE status = 'opened'
+	`, vins)
 	if err != nil {
 		return nil, err
 	}
@@ -71,8 +69,8 @@ func (r *PgxDTCRepository) HasActiveDTCs(ctx context.Context, vins []string) (ma
 
 	result := make(map[string]bool, len(vins))
 	for rows.Next() {
-		var vin string
-		if err := rows.Scan(&vin); err != nil {
+		var vin, status string
+		if err := rows.Scan(&vin, &status); err != nil {
 			return nil, err
 		}
 		result[vin] = true

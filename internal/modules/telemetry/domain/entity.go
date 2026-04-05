@@ -29,28 +29,15 @@ type TelemetryEntry struct {
 	BatteryVoltage *float64
 }
 
-func (TelemetryEntry) TableName() string { return "telemetry.entries" }
+func (TelemetryEntry) TableName() string { return "telemetry_entries" }
 
-// ActiveDTC represents a fault code currently present on a vehicle.
-// Keyed by (device_id, code) — one row per active code per device.
-type ActiveDTC struct {
-	DeviceID   uuid.UUID
-	VIN        string
-	Code       string
-	DetectedAt time.Time
-	closed     bool
-}
-
-func NewActiveDTC(deviceID uuid.UUID, vin, code string, at time.Time) *ActiveDTC {
-	return &ActiveDTC{DeviceID: deviceID, VIN: vin, Code: code, DetectedAt: at}
-}
-
-func (d *ActiveDTC) Close() {
-	d.closed = true
-}
-
-func (d *ActiveDTC) IsClosed() bool {
-	return d.closed
+// DTCEntry records a single DTC status change emitted by a device.
+type DTCEntry struct {
+	Time     time.Time
+	DeviceID uuid.UUID
+	VIN      string
+	Code     string
+	Status   string // "opened" or "closed"
 }
 
 type TelemetrySummary struct {

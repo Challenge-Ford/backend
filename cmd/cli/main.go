@@ -99,7 +99,7 @@ func runReset(_ []string) {
 		os.Exit(1)
 	}
 
-	if err := db.Exec("TRUNCATE TABLE telemetry.entries, telemetry.active_dtcs").Error; err != nil {
+	if err := db.Exec("TRUNCATE TABLE telemetry_entries, dtc_entries").Error; err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		os.Exit(1)
 	}
