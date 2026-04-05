@@ -1,6 +1,7 @@
 bin/
 dist/
 build/
+mocks/
 certs/
 *.exe
 *.exe~

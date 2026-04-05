@@ -3,7 +3,7 @@ package messaging
 import "time"
 
 type TelemetryMessage struct {
-	Time           *time.Time `json:"time"`
+	Time           time.Time  `json:"time"`
 	VIN            string     `json:"vin"`
 	Lat            *float64   `json:"lat"`
 	Lng            *float64   `json:"lng"`
@@ -25,7 +25,8 @@ type TelemetryMessage struct {
 }
 
 type DTCMessage struct {
-	VIN    string `json:"vin"`
-	Code   string `json:"code"`
-	Status string `json:"status"`
+	VIN    string    `json:"vin"`
+	Code   string    `json:"code"`
+	Status string    `json:"status"`
+	Time   time.Time `json:"time"`
 }

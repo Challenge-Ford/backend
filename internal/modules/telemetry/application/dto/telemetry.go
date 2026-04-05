@@ -16,7 +16,7 @@ type ListTelemetryInput struct {
 }
 
 type RecordTelemetryInput struct {
-	Time           *time.Time
+	Time           time.Time
 	VIN            string
 	Lat            *float64
 	Lng            *float64
@@ -41,6 +41,7 @@ type RecordDTCInput struct {
 	VIN    string
 	Code   string
 	Status string // "opened" or "closed"
+	Time   time.Time
 }
 
 // OBD-only output — GPS is not exposed via API.

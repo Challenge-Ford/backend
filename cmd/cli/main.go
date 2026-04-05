@@ -24,7 +24,6 @@ const (
 
 func pf(v float64) *float64 { return &v }
 func pi(v int) *int         { return &v }
-func pt(v time.Time) *time.Time { return &v }
 
 func clamp(v, lo, hi float64) float64 {
 	return math.Max(lo, math.Min(hi, v))
@@ -207,7 +206,7 @@ func runDTC(args []string) {
 	defer conn.Close()
 	defer ch.Close()
 
-	if err := publish(ch, queueDTC, messaging.DTCMessage{VIN: *vin, Code: *code, Status: *status}); err != nil {
+	if err := publish(ch, queueDTC, messaging.DTCMessage{VIN: *vin, Code: *code, Status: *status, Time: time.Now().UTC()}); err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		os.Exit(1)
 	}
@@ -439,7 +438,7 @@ func runSimulate(args []string) {
 		t := start.Add(interval * time.Duration(i))
 		msg := simulatePoint(i, *points, fuelBase)
 		msg.VIN = *vin
-		msg.Time = pt(t.UTC())
+		msg.Time = t.UTC()
 
 		if err := publish(ch, queueTelemetry, msg); err != nil {
 			fmt.Fprintf(os.Stderr, "point %d: %v\n", i, err)

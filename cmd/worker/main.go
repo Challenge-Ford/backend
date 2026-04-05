@@ -213,5 +213,6 @@ func handleDTC(body []byte, uc *telemetryusecase.RecordDTCUseCase) error {
 		VIN:    msg.VIN,
 		Code:   msg.Code,
 		Status: msg.Status,
+		Time:   msg.Time,
 	})
 }

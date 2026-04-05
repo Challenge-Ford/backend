@@ -2,7 +2,6 @@ package telemetryusecase
 
 import (
 	"context"
-	"time"
 
 	"torque/internal/core/apperr"
 	telemetrydto "torque/internal/modules/telemetry/application/dto"
@@ -31,7 +30,7 @@ func (uc *RecordDTCUseCase) Execute(ctx context.Context, input telemetrydto.Reco
 		return apperr.NotFound("commissioned device for vin " + input.VIN)
 	}
 
-	dtc := telemetrydomain.NewActiveDTC(device.ID, input.VIN, input.Code, time.Now().UTC())
+	dtc := telemetrydomain.NewActiveDTC(device.ID, input.VIN, input.Code, input.Time.UTC())
 	if input.Status == "closed" {
 		dtc.Close()
 	}

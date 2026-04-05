@@ -2,7 +2,6 @@ package telemetryusecase
 
 import (
 	"context"
-	"time"
 
 	"torque/internal/core/apperr"
 	telemetrydto "torque/internal/modules/telemetry/application/dto"
@@ -27,13 +26,8 @@ func (uc *RecordTelemetryUseCase) Execute(ctx context.Context, input telemetrydt
 		return apperr.NotFound("commissioned device for vin " + input.VIN)
 	}
 
-	t := time.Now().UTC()
-	if input.Time != nil {
-		t = input.Time.UTC()
-	}
-
 	return uc.repo.Insert(ctx, &telemetrydomain.TelemetryEntry{
-		Time:           t,
+		Time:           input.Time.UTC(),
 		DeviceID:       device.ID,
 		VIN:            input.VIN,
 		Lat:            input.Lat,
