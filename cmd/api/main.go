@@ -123,8 +123,8 @@ stepPKI, err := pki.NewStepCAClient(
 
 	vehicles := handler.NewVehicleHandler(
 		vehicleusecase.NewCreateVehicle(repo, modelRepo, validate),
-		vehicleusecase.NewGetVehicle(repo),
-		vehicleusecase.NewListVehicles(repo),
+		vehicleusecase.NewGetVehicle(repo, dtcRepo),
+		vehicleusecase.NewListVehicles(repo, dtcRepo),
 		vehicleusecase.NewUpdateVehicle(repo, modelRepo),
 		vehicleusecase.NewDeleteVehicle(repo, deviceRepo),
 	)

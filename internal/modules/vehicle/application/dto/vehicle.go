@@ -20,18 +20,19 @@ type UpdateVehicleInput struct {
 }
 
 type VehicleOutput struct {
-	ID          string  `json:"id"`
-	CustomerID  *string `json:"customerId"`
-	ModelID     string  `json:"modelId"`
-	ModelYearID string  `json:"modelYearId"`
-	ModelName   string  `json:"modelName"`
-	Year        int     `json:"year"`
-	ModelURL    *string `json:"modelUrl"`
-	VIN         string  `json:"vin"`
-	Plate       string  `json:"plate"`
-	Color       string  `json:"color"`
-	CreatedAt   string  `json:"createdAt"`
-	UpdatedAt   string  `json:"updatedAt"`
+	ID             string  `json:"id"`
+	CustomerID     *string `json:"customerId"`
+	ModelID        string  `json:"modelId"`
+	ModelYearID    string  `json:"modelYearId"`
+	ModelName      string  `json:"modelName"`
+	Year           int     `json:"year"`
+	ModelURL       *string `json:"modelUrl"`
+	VIN            string  `json:"vin"`
+	Plate          string  `json:"plate"`
+	Color          string  `json:"color"`
+	HasActiveDTCs  bool    `json:"hasActiveDtcs"`
+	CreatedAt      string  `json:"createdAt"`
+	UpdatedAt      string  `json:"updatedAt"`
 }
 
 func ToVehicleOutput(v *vehicledomain.Vehicle) *VehicleOutput {

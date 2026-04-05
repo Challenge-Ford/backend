@@ -43,3 +43,23 @@ func (r *GormDTCRepository) ListActive(ctx context.Context, vin string) ([]*tele
 		Order("detected_at DESC").
 		Find(&dtcs).Error
 }
+
+func (r *GormDTCRepository) HasActiveDTCs(ctx context.Context, vins []string) (map[string]bool, error) {
+	if len(vins) == 0 {
+		return map[string]bool{}, nil
+	}
+	var rows []struct{ VIN string }
+	err := r.db.WithContext(ctx).
+		Model(&telemetrydomain.ActiveDTC{}).
+		Select("DISTINCT vin").
+		Where("vin IN ?", vins).
+		Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	result := make(map[string]bool, len(rows))
+	for _, row := range rows {
+		result[row.VIN] = true
+	}
+	return result, nil
+}

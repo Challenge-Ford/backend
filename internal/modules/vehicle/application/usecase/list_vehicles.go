@@ -5,16 +5,18 @@ import (
 
 	"torque/internal/core/apperr"
 	"torque/internal/core/pagination"
+	telemetrydomain "torque/internal/modules/telemetry/domain"
 	vehicledto "torque/internal/modules/vehicle/application/dto"
 	vehicledomain "torque/internal/modules/vehicle/domain"
 )
 
 type ListVehiclesUseCase struct {
-	repo vehicledomain.Repository
+	repo    vehicledomain.Repository
+	dtcRepo telemetrydomain.DTCRepository
 }
 
-func NewListVehicles(repo vehicledomain.Repository) *ListVehiclesUseCase {
-	return &ListVehiclesUseCase{repo: repo}
+func NewListVehicles(repo vehicledomain.Repository, dtcRepo telemetrydomain.DTCRepository) *ListVehiclesUseCase {
+	return &ListVehiclesUseCase{repo: repo, dtcRepo: dtcRepo}
 }
 
 func (uc *ListVehiclesUseCase) Execute(ctx context.Context, page pagination.Page) (*pagination.Result[*vehicledto.VehicleOutput], error) {
@@ -25,9 +27,21 @@ func (uc *ListVehiclesUseCase) Execute(ctx context.Context, page pagination.Page
 		return nil, apperr.Internal("failed to list vehicles", err)
 	}
 
+	vins := make([]string, len(vehicles))
+	for i, v := range vehicles {
+		vins[i] = string(v.VIN)
+	}
+
+	dtcMap, err := uc.dtcRepo.HasActiveDTCs(ctx, vins)
+	if err != nil {
+		return nil, apperr.Internal("failed to check active dtcs", err)
+	}
+
 	output := make([]*vehicledto.VehicleOutput, len(vehicles))
 	for i, v := range vehicles {
-		output[i] = vehicledto.ToVehicleOutput(v)
+		out := vehicledto.ToVehicleOutput(v)
+		out.HasActiveDTCs = dtcMap[string(v.VIN)]
+		output[i] = out
 	}
 
 	result := pagination.NewResult(output, page, total)
