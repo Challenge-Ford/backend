@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"time"
@@ -9,19 +10,22 @@ import (
 	"github.com/google/uuid"
 	"torque/cmd/api/httperr"
 	telemetrydto "torque/internal/modules/telemetry/application/dto"
-	telemetryusecase "torque/internal/modules/telemetry/application/usecase"
-	vehicledomain "torque/internal/modules/vehicle/domain"
 )
 
-type TelemetryHandler struct {
-	listTelemetry *telemetryusecase.ListTelemetryUseCase
-	listDTCs      *telemetryusecase.ListActiveDTCsUseCase
+type telemetryLister interface {
+	Execute(ctx context.Context, input telemetrydto.ListTelemetryInput) (*telemetrydto.TelemetryListOutput, error)
 }
 
-func NewTelemetryHandler(
-	listTelemetry *telemetryusecase.ListTelemetryUseCase,
-	listDTCs *telemetryusecase.ListActiveDTCsUseCase,
-) *TelemetryHandler {
+type dtcLister interface {
+	Execute(ctx context.Context, vehicleID uuid.UUID) (*telemetrydto.DTCListOutput, error)
+}
+
+type TelemetryHandler struct {
+	listTelemetry telemetryLister
+	listDTCs      dtcLister
+}
+
+func NewTelemetryHandler(listTelemetry telemetryLister, listDTCs dtcLister) *TelemetryHandler {
 	return &TelemetryHandler{listTelemetry: listTelemetry, listDTCs: listDTCs}
 }
 
@@ -58,7 +62,7 @@ func (h *TelemetryHandler) ListTelemetry(w http.ResponseWriter, r *http.Request)
 	limit, _ := strconv.Atoi(q.Get("limit"))
 
 	result, err := h.listTelemetry.Execute(r.Context(), telemetrydto.ListTelemetryInput{
-		VehicleID: vehicledomain.VehicleID(id),
+		VehicleID: id,
 		From:      from,
 		To:        to,
 		Limit:     limit,
@@ -79,7 +83,7 @@ func (h *TelemetryHandler) ListDTCs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := h.listDTCs.Execute(r.Context(), vehicledomain.VehicleID(id))
+	result, err := h.listDTCs.Execute(r.Context(), id)
 	if err != nil {
 		httperr.Write(w, err)
 		return

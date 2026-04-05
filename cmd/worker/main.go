@@ -14,10 +14,11 @@ import (
 	"go.uber.org/zap"
 	"torque/internal/core/db"
 	"torque/internal/core/logger"
-	devicerepository "torque/internal/modules/device/infrastructure/repository"
+	"torque/internal/infrastructure/adapters"
 	"torque/internal/infrastructure/messaging"
 	telemetrydto "torque/internal/modules/telemetry/application/dto"
 	telemetryusecase "torque/internal/modules/telemetry/application/usecase"
+	devicerepository "torque/internal/modules/device/infrastructure/repository"
 	telemetryrepository "torque/internal/modules/telemetry/infrastructure/repository"
 )
 
@@ -84,9 +85,10 @@ func main() {
 	deviceRepo := devicerepository.NewGormRepository(mainConn)
 	telemetryRepo := telemetryrepository.NewPgxRepository(tsPool)
 	dtcRepo := telemetryrepository.NewPgxDTCRepository(tsPool)
+	deviceResolver := adapters.NewDeviceResolver(deviceRepo)
 
-	recordTelemetry := telemetryusecase.NewRecordTelemetry(telemetryRepo, deviceRepo)
-	recordDTC := telemetryusecase.NewRecordDTC(dtcRepo, deviceRepo)
+	recordTelemetry := telemetryusecase.NewRecordTelemetry(telemetryRepo, deviceResolver)
+	recordDTC := telemetryusecase.NewRecordDTC(dtcRepo, deviceResolver)
 
 	go consume(log, ch, queueTelemetry, func(body []byte) error {
 		return handleTelemetry(body, recordTelemetry)

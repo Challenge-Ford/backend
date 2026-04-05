@@ -15,6 +15,7 @@ import (
 	"torque/internal/core/db"
 	"torque/internal/core/logger"
 	"torque/internal/core/pki"
+	"torque/internal/infrastructure/adapters"
 	deviceusecase "torque/internal/modules/device/application/usecase"
 	devicedomain "torque/internal/modules/device/domain"
 	devicerepository "torque/internal/modules/device/infrastructure/repository"
@@ -119,9 +120,11 @@ stepPKI, err := pki.NewStepCAClient(
 		deviceusecase.NewDecommissionDevice(deviceRepo),
 	)
 
+	vehicleResolver := adapters.NewVehicleResolver(repo)
+
 	telemetry := handler.NewTelemetryHandler(
-		telemetryusecase.NewListTelemetry(telemetryRepo, repo),
-		telemetryusecase.NewListActiveDTCs(dtcRepo, repo),
+		telemetryusecase.NewListTelemetry(telemetryRepo, vehicleResolver),
+		telemetryusecase.NewListActiveDTCs(dtcRepo, vehicleResolver),
 	)
 
 	vehicles := handler.NewVehicleHandler(

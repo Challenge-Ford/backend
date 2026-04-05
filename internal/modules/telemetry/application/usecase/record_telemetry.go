@@ -4,24 +4,22 @@ import (
 	"context"
 	"time"
 
-	"github.com/google/uuid"
 	"torque/internal/core/apperr"
 	telemetrydto "torque/internal/modules/telemetry/application/dto"
-	devicedomain "torque/internal/modules/device/domain"
 	telemetrydomain "torque/internal/modules/telemetry/domain"
 )
 
 type RecordTelemetryUseCase struct {
-	repo       telemetrydomain.Repository
-	deviceRepo devicedomain.Repository
+	repo           telemetrydomain.Repository
+	deviceResolver telemetrydomain.DeviceResolver
 }
 
-func NewRecordTelemetry(repo telemetrydomain.Repository, deviceRepo devicedomain.Repository) *RecordTelemetryUseCase {
-	return &RecordTelemetryUseCase{repo: repo, deviceRepo: deviceRepo}
+func NewRecordTelemetry(repo telemetrydomain.Repository, deviceResolver telemetrydomain.DeviceResolver) *RecordTelemetryUseCase {
+	return &RecordTelemetryUseCase{repo: repo, deviceResolver: deviceResolver}
 }
 
 func (uc *RecordTelemetryUseCase) Execute(ctx context.Context, input telemetrydto.RecordTelemetryInput) error {
-	device, err := uc.deviceRepo.GetCommissionedByVIN(ctx, input.VIN)
+	device, err := uc.deviceResolver.GetCommissionedByVIN(ctx, input.VIN)
 	if err != nil {
 		return apperr.Internal("lookup device by vin", err)
 	}
@@ -36,7 +34,7 @@ func (uc *RecordTelemetryUseCase) Execute(ctx context.Context, input telemetrydt
 
 	return uc.repo.Insert(ctx, &telemetrydomain.TelemetryEntry{
 		Time:           t,
-		DeviceID:       uuid.UUID(device.ID),
+		DeviceID:       device.ID,
 		VIN:            input.VIN,
 		Lat:            input.Lat,
 		Lng:            input.Lng,

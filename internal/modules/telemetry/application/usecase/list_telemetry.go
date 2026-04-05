@@ -7,24 +7,23 @@ import (
 	"torque/internal/core/apperr"
 	telemetrydto "torque/internal/modules/telemetry/application/dto"
 	telemetrydomain "torque/internal/modules/telemetry/domain"
-	vehicledomain "torque/internal/modules/vehicle/domain"
 )
 
 type ListTelemetryUseCase struct {
-	repo        telemetrydomain.Repository
-	vehicleRepo vehicledomain.Repository
+	repo            telemetrydomain.Repository
+	vehicleResolver telemetrydomain.VehicleResolver
 }
 
-func NewListTelemetry(repo telemetrydomain.Repository, vehicleRepo vehicledomain.Repository) *ListTelemetryUseCase {
-	return &ListTelemetryUseCase{repo: repo, vehicleRepo: vehicleRepo}
+func NewListTelemetry(repo telemetrydomain.Repository, vehicleResolver telemetrydomain.VehicleResolver) *ListTelemetryUseCase {
+	return &ListTelemetryUseCase{repo: repo, vehicleResolver: vehicleResolver}
 }
 
 func (uc *ListTelemetryUseCase) Execute(ctx context.Context, input telemetrydto.ListTelemetryInput) (*telemetrydto.TelemetryListOutput, error) {
-	vehicle, err := uc.vehicleRepo.GetByID(ctx, input.VehicleID)
+	vin, err := uc.vehicleResolver.GetVINByID(ctx, input.VehicleID)
 	if err != nil {
 		return nil, apperr.Internal("failed to get vehicle", err)
 	}
-	if vehicle == nil {
+	if vin == "" {
 		return nil, apperr.NotFound("vehicle")
 	}
 
@@ -33,7 +32,7 @@ func (uc *ListTelemetryUseCase) Execute(ctx context.Context, input telemetrydto.
 		limit = 100
 	}
 
-	entries, err := uc.repo.List(ctx, string(vehicle.VIN), input.From, input.To, limit+1, input.After)
+	entries, err := uc.repo.List(ctx, vin, input.From, input.To, limit+1, input.After)
 	if err != nil {
 		return nil, apperr.Internal("failed to list telemetry", err)
 	}

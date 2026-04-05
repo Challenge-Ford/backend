@@ -3,12 +3,12 @@ package telemetrydto
 import (
 	"time"
 
+	"github.com/google/uuid"
 	telemetrydomain "torque/internal/modules/telemetry/domain"
-	vehicledomain "torque/internal/modules/vehicle/domain"
 )
 
 type ListTelemetryInput struct {
-	VehicleID vehicledomain.VehicleID
+	VehicleID uuid.UUID
 	From      time.Time
 	To        time.Time
 	Limit     int
