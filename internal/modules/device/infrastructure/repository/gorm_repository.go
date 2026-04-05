@@ -85,3 +85,18 @@ func (r *GormRepository) GetByVehicleID(ctx context.Context, vehicleID uuid.UUID
 	}
 	return &device, nil
 }
+
+func (r *GormRepository) GetCommissionedByVIN(ctx context.Context, vin string) (*devicedomain.Device, error) {
+	var device devicedomain.Device
+	err := r.db.WithContext(ctx).
+		Joins("JOIN vehicle.vehicles v ON v.id = device.devices.vehicle_id AND v.deleted_at IS NULL").
+		Where("v.vin = ? AND device.devices.vehicle_id IS NOT NULL AND device.devices.deleted_at IS NULL", vin).
+		First(&device).Error
+	if err == gorm.ErrRecordNotFound {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &device, nil
+}

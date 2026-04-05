@@ -13,4 +13,5 @@ type Repository interface {
 	GetByID(ctx context.Context, id DeviceID) (*Device, error)
 	GetByName(ctx context.Context, name string) (*Device, error)
 	GetByVehicleID(ctx context.Context, vehicleID uuid.UUID) (*Device, error)
+	GetCommissionedByVIN(ctx context.Context, vin string) (*Device, error)
 }

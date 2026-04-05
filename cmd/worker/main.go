@@ -9,13 +9,15 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 	"torque/internal/core/db"
 	"torque/internal/core/logger"
+	devicerepository "torque/internal/modules/device/infrastructure/repository"
+	telemetrydto "torque/internal/modules/telemetry/application/dto"
+	telemetryusecase "torque/internal/modules/telemetry/application/usecase"
 	telemetrydomain "torque/internal/modules/telemetry/domain"
 	telemetryrepository "torque/internal/modules/telemetry/infrastructure/repository"
 )
@@ -44,14 +46,12 @@ func main() {
 	}
 	defer log.Sync()
 
-	// Primary DB — device/vehicle lookups
 	mainConn, err := db.Connect(mustEnv("DATABASE_URL"))
 	if err != nil {
 		log.Fatal("failed to connect to database", zap.Error(err))
 	}
 	defer db.Close(mainConn)
 
-	// TimescaleDB — telemetry persistence
 	tsConn, err := db.Connect(mustEnv("TIMESERIES_DATABASE_URL"))
 	if err != nil {
 		log.Fatal("failed to connect to timescaledb", zap.Error(err))
@@ -80,15 +80,19 @@ func main() {
 		}
 	}
 
+	deviceRepo := devicerepository.NewGormRepository(mainConn)
 	telemetryRepo := telemetryrepository.NewGormRepository(tsConn)
 	dtcRepo := telemetryrepository.NewGormDTCRepository(tsConn)
 
+	recordTelemetry := telemetryusecase.NewRecordTelemetry(telemetryRepo, deviceRepo)
+	recordDTC := telemetryusecase.NewRecordDTC(dtcRepo, deviceRepo)
+
 	go consume(log, ch, queueTelemetry, func(body []byte) error {
-		return handleTelemetry(body, mainConn, telemetryRepo)
+		return handleTelemetry(body, recordTelemetry)
 	})
 
 	go consume(log, ch, queueDTC, func(body []byte) error {
-		return handleDTC(body, mainConn, dtcRepo)
+		return handleDTC(body, recordDTC)
 	})
 
 	log.Info("worker started")
@@ -188,7 +192,7 @@ type dtcMsg struct {
 	Status string `json:"status"`
 }
 
-func handleTelemetry(body []byte, mainConn *gorm.DB, repo *telemetryrepository.GormRepository) error {
+func handleTelemetry(body []byte, uc *telemetryusecase.RecordTelemetryUseCase) error {
 	var msg telemetryMsg
 	if err := json.Unmarshal(body, &msg); err != nil {
 		return fmt.Errorf("unmarshal telemetry: %w", err)
@@ -196,20 +200,8 @@ func handleTelemetry(body []byte, mainConn *gorm.DB, repo *telemetryrepository.G
 	if msg.VIN == "" {
 		return fmt.Errorf("missing vin")
 	}
-
-	deviceID, err := lookupDeviceByVIN(mainConn, msg.VIN)
-	if err != nil {
-		return fmt.Errorf("lookup device for vin %s: %w", msg.VIN, err)
-	}
-
-	t := time.Now().UTC()
-	if msg.Time != nil {
-		t = msg.Time.UTC()
-	}
-
-	return repo.Insert(context.Background(), &telemetrydomain.TelemetryEntry{
-		Time:           t,
-		DeviceID:       deviceID,
+	return uc.Execute(context.Background(), telemetrydto.RecordTelemetryInput{
+		Time:           msg.Time,
 		VIN:            msg.VIN,
 		Lat:            msg.Lat,
 		Lng:            msg.Lng,
@@ -231,7 +223,7 @@ func handleTelemetry(body []byte, mainConn *gorm.DB, repo *telemetryrepository.G
 	})
 }
 
-func handleDTC(body []byte, mainConn *gorm.DB, repo *telemetryrepository.GormDTCRepository) error {
+func handleDTC(body []byte, uc *telemetryusecase.RecordDTCUseCase) error {
 	var msg dtcMsg
 	if err := json.Unmarshal(body, &msg); err != nil {
 		return fmt.Errorf("unmarshal dtc: %w", err)
@@ -239,38 +231,9 @@ func handleDTC(body []byte, mainConn *gorm.DB, repo *telemetryrepository.GormDTC
 	if msg.VIN == "" || msg.Code == "" {
 		return fmt.Errorf("missing vin or code")
 	}
-	if msg.Status != "opened" && msg.Status != "closed" {
-		return fmt.Errorf("invalid status: %s", msg.Status)
-	}
-
-	deviceID, err := lookupDeviceByVIN(mainConn, msg.VIN)
-	if err != nil {
-		return fmt.Errorf("lookup device for vin %s: %w", msg.VIN, err)
-	}
-
-	ctx := context.Background()
-	if msg.Status == "opened" {
-		return repo.SetActive(ctx, deviceID, msg.VIN, msg.Code, time.Now().UTC())
-	}
-	return repo.SetInactive(ctx, deviceID, msg.Code)
-}
-
-func lookupDeviceByVIN(mainConn *gorm.DB, vin string) (uuid.UUID, error) {
-	var id string
-	err := mainConn.Raw(`
-		SELECT d.id
-		FROM device.devices d
-		JOIN vehicle.vehicles v ON v.id = d.vehicle_id AND v.deleted_at IS NULL
-		WHERE v.vin = $1
-		  AND d.vehicle_id IS NOT NULL
-		  AND d.deleted_at IS NULL
-		LIMIT 1
-	`, vin).Scan(&id).Error
-	if err != nil {
-		return uuid.Nil, err
-	}
-	if id == "" {
-		return uuid.Nil, fmt.Errorf("no commissioned device found for vin %s", vin)
-	}
-	return uuid.Parse(id)
+	return uc.Execute(context.Background(), telemetrydto.RecordDTCInput{
+		VIN:    msg.VIN,
+		Code:   msg.Code,
+		Status: msg.Status,
+	})
 }

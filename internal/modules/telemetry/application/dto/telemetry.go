@@ -6,6 +6,34 @@ import (
 	telemetrydomain "torque/internal/modules/telemetry/domain"
 )
 
+type RecordTelemetryInput struct {
+	Time           *time.Time
+	VIN            string
+	Lat            *float64
+	Lng            *float64
+	Alt            *float64
+	GPSSpeed       *float64
+	Heading        *float64
+	HDOP           *float64
+	RPM            *int
+	Speed          *int
+	CoolantTemp    *float64
+	IntakeTemp     *float64
+	EngineLoad     *float64
+	ThrottlePos    *float64
+	FuelLevel      *float64
+	FuelTrimShort  *float64
+	FuelTrimLong   *float64
+	MAF            *float64
+	BatteryVoltage *float64
+}
+
+type RecordDTCInput struct {
+	VIN    string
+	Code   string
+	Status string // "opened" or "closed"
+}
+
 // OBD-only output — GPS is not exposed via API.
 type TelemetryOutput struct {
 	Time           time.Time `json:"time"`
