@@ -11,6 +11,7 @@ import (
 
 	"github.com/joho/godotenv"
 	amqp "github.com/rabbitmq/amqp091-go"
+	"torque/internal/infrastructure/messaging"
 )
 
 const (
@@ -18,33 +19,6 @@ const (
 	queueDTC       = "torque.dtc"
 )
 
-type telemetryMsg struct {
-	Time           *time.Time `json:"time,omitempty"`
-	VIN            string     `json:"vin"`
-	Lat            *float64   `json:"lat,omitempty"`
-	Lng            *float64   `json:"lng,omitempty"`
-	Alt            *float64   `json:"alt,omitempty"`
-	GPSSpeed       *float64   `json:"gps_speed,omitempty"`
-	Heading        *float64   `json:"heading,omitempty"`
-	HDOP           *float64   `json:"hdop,omitempty"`
-	RPM            *int       `json:"rpm,omitempty"`
-	Speed          *int       `json:"speed,omitempty"`
-	CoolantTemp    *float64   `json:"coolant_temp,omitempty"`
-	IntakeTemp     *float64   `json:"intake_temp,omitempty"`
-	EngineLoad     *float64   `json:"engine_load,omitempty"`
-	ThrottlePos    *float64   `json:"throttle_pos,omitempty"`
-	FuelLevel      *float64   `json:"fuel_level,omitempty"`
-	FuelTrimShort  *float64   `json:"fuel_trim_short,omitempty"`
-	FuelTrimLong   *float64   `json:"fuel_trim_long,omitempty"`
-	MAF            *float64   `json:"maf,omitempty"`
-	BatteryVoltage *float64   `json:"battery_voltage,omitempty"`
-}
-
-type dtcMsg struct {
-	VIN    string `json:"vin"`
-	Code   string `json:"code"`
-	Status string `json:"status"`
-}
 
 func pf(v float64) *float64 { return &v }
 func pi(v int) *int         { return &v }
@@ -141,7 +115,7 @@ func runTelemetry(args []string) {
 		os.Exit(1)
 	}
 
-	msg := telemetryMsg{VIN: *vin}
+	msg := messaging.TelemetryMessage{VIN: *vin}
 	fs.Visit(func(f *flag.Flag) {
 		switch f.Name {
 		case "rpm":           msg.RPM = pi(*rpm)
@@ -208,7 +182,7 @@ func runDTC(args []string) {
 	defer conn.Close()
 	defer ch.Close()
 
-	if err := publish(ch, queueDTC, dtcMsg{VIN: *vin, Code: *code, Status: *status}); err != nil {
+	if err := publish(ch, queueDTC, messaging.DTCMessage{VIN: *vin, Code: *code, Status: *status}); err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		os.Exit(1)
 	}
@@ -247,7 +221,7 @@ func gpsAt(i, n int) (lat, lng float64) {
 	return lerp(a[0], b[0], frac) + noise(0.001), lerp(a[1], b[1], frac) + noise(0.001)
 }
 
-func simulatePoint(i, n int, fuelBase float64) telemetryMsg {
+func simulatePoint(i, n int, fuelBase float64) messaging.TelemetryMessage {
 	progress := float64(i) / float64(n-1)
 
 	var (
@@ -376,7 +350,7 @@ func simulatePoint(i, n int, fuelBase float64) telemetryMsg {
 	trimLong := noise(1.5)
 	hdop := clamp(1.0+noise(0.3), 0.7, 2.0)
 
-	msg := telemetryMsg{
+	msg := messaging.TelemetryMessage{
 		VIN:            "",
 		Lat:            pf(math.Round(lat*1e6) / 1e6),
 		Lng:            pf(math.Round(lng*1e6) / 1e6),

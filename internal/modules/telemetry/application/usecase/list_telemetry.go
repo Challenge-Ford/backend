@@ -19,15 +19,7 @@ func NewListTelemetry(repo telemetrydomain.Repository, vehicleRepo vehicledomain
 	return &ListTelemetryUseCase{repo: repo, vehicleRepo: vehicleRepo}
 }
 
-type ListTelemetryInput struct {
-	VehicleID vehicledomain.VehicleID
-	From      time.Time
-	To        time.Time
-	Limit     int
-	After     *time.Time
-}
-
-func (uc *ListTelemetryUseCase) Execute(ctx context.Context, input ListTelemetryInput) (*telemetrydto.TelemetryListOutput, error) {
+func (uc *ListTelemetryUseCase) Execute(ctx context.Context, input telemetrydto.ListTelemetryInput) (*telemetrydto.TelemetryListOutput, error) {
 	vehicle, err := uc.vehicleRepo.GetByID(ctx, input.VehicleID)
 	if err != nil {
 		return nil, apperr.Internal("failed to get vehicle", err)

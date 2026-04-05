@@ -4,7 +4,16 @@ import (
 	"time"
 
 	telemetrydomain "torque/internal/modules/telemetry/domain"
+	vehicledomain "torque/internal/modules/vehicle/domain"
 )
+
+type ListTelemetryInput struct {
+	VehicleID vehicledomain.VehicleID
+	From      time.Time
+	To        time.Time
+	Limit     int
+	After     *time.Time
+}
 
 type RecordTelemetryInput struct {
 	Time           *time.Time

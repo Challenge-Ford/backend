@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"torque/cmd/api/httperr"
+	telemetrydto "torque/internal/modules/telemetry/application/dto"
 	telemetryusecase "torque/internal/modules/telemetry/application/usecase"
 	vehicledomain "torque/internal/modules/vehicle/domain"
 )
@@ -56,7 +57,7 @@ func (h *TelemetryHandler) ListTelemetry(w http.ResponseWriter, r *http.Request)
 
 	limit, _ := strconv.Atoi(q.Get("limit"))
 
-	result, err := h.listTelemetry.Execute(r.Context(), telemetryusecase.ListTelemetryInput{
+	result, err := h.listTelemetry.Execute(r.Context(), telemetrydto.ListTelemetryInput{
 		VehicleID: vehicledomain.VehicleID(id),
 		From:      from,
 		To:        to,

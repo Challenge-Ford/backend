@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/joho/godotenv"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -16,6 +15,7 @@ import (
 	"torque/internal/core/db"
 	"torque/internal/core/logger"
 	devicerepository "torque/internal/modules/device/infrastructure/repository"
+	"torque/internal/infrastructure/messaging"
 	telemetrydto "torque/internal/modules/telemetry/application/dto"
 	telemetryusecase "torque/internal/modules/telemetry/application/usecase"
 	telemetrydomain "torque/internal/modules/telemetry/domain"
@@ -164,36 +164,9 @@ func consume(log *zap.Logger, ch *amqp.Channel, queue string, handle func([]byte
 	}
 }
 
-type telemetryMsg struct {
-	Time           *time.Time `json:"time"`
-	VIN            string     `json:"vin"`
-	Lat            *float64   `json:"lat"`
-	Lng            *float64   `json:"lng"`
-	Alt            *float64   `json:"alt"`
-	GPSSpeed       *float64   `json:"gps_speed"`
-	Heading        *float64   `json:"heading"`
-	HDOP           *float64   `json:"hdop"`
-	RPM            *int       `json:"rpm"`
-	Speed          *int       `json:"speed"`
-	CoolantTemp    *float64   `json:"coolant_temp"`
-	IntakeTemp     *float64   `json:"intake_temp"`
-	EngineLoad     *float64   `json:"engine_load"`
-	ThrottlePos    *float64   `json:"throttle_pos"`
-	FuelLevel      *float64   `json:"fuel_level"`
-	FuelTrimShort  *float64   `json:"fuel_trim_short"`
-	FuelTrimLong   *float64   `json:"fuel_trim_long"`
-	MAF            *float64   `json:"maf"`
-	BatteryVoltage *float64   `json:"battery_voltage"`
-}
-
-type dtcMsg struct {
-	VIN    string `json:"vin"`
-	Code   string `json:"code"`
-	Status string `json:"status"`
-}
 
 func handleTelemetry(body []byte, uc *telemetryusecase.RecordTelemetryUseCase) error {
-	var msg telemetryMsg
+	var msg messaging.TelemetryMessage
 	if err := json.Unmarshal(body, &msg); err != nil {
 		return fmt.Errorf("unmarshal telemetry: %w", err)
 	}
@@ -224,7 +197,7 @@ func handleTelemetry(body []byte, uc *telemetryusecase.RecordTelemetryUseCase) e
 }
 
 func handleDTC(body []byte, uc *telemetryusecase.RecordDTCUseCase) error {
-	var msg dtcMsg
+	var msg messaging.DTCMessage
 	if err := json.Unmarshal(body, &msg); err != nil {
 		return fmt.Errorf("unmarshal dtc: %w", err)
 	}
