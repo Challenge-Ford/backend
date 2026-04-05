@@ -7,9 +7,9 @@ import (
 )
 
 type TelemetryEntry struct {
-	Time           time.Time
-	DeviceID       uuid.UUID
-	VIN            string
+	Time           time.Time `gorm:"primaryKey;not null"`
+	DeviceID       uuid.UUID `gorm:"type:uuid;primaryKey;not null"`
+	VIN            string    `gorm:"not null"`
 	Lat            *float64
 	Lng            *float64
 	Alt            *float64
@@ -29,22 +29,18 @@ type TelemetryEntry struct {
 	BatteryVoltage *float64
 }
 
-type DTCEvent struct {
-	ID       uuid.UUID
-	DeviceID uuid.UUID
-	VIN      string
-	Code     string
-	OpenedAt time.Time
-	ClosedAt *time.Time
+func (TelemetryEntry) TableName() string { return "telemetry.entries" }
+
+// ActiveDTC represents a fault code currently present on a vehicle.
+// Keyed by (device_id, code) — one row per active code per device.
+type ActiveDTC struct {
+	DeviceID   uuid.UUID `gorm:"type:uuid;primaryKey"`
+	VIN        string    `gorm:"not null"`
+	Code       string    `gorm:"primaryKey"`
+	DetectedAt time.Time `gorm:"not null"`
 }
 
-type Session struct {
-	ID       uuid.UUID
-	DeviceID uuid.UUID
-	VIN      string
-	OpenedAt time.Time
-	ClosedAt *time.Time
-}
+func (ActiveDTC) TableName() string { return "telemetry.active_dtcs" }
 
 type TelemetrySummary struct {
 	Bucket            time.Time

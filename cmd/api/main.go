@@ -17,7 +17,9 @@ import (
 	deviceusecase "torque/internal/modules/device/application/usecase"
 	devicedomain "torque/internal/modules/device/domain"
 	devicerepository "torque/internal/modules/device/infrastructure/repository"
-vehicleusecase "torque/internal/modules/vehicle/application/usecase"
+	telemetryusecase "torque/internal/modules/telemetry/application/usecase"
+	telemetryrepository "torque/internal/modules/telemetry/infrastructure/repository"
+	vehicleusecase "torque/internal/modules/vehicle/application/usecase"
 	vehicledomain "torque/internal/modules/vehicle/domain"
 	vehiclerepository "torque/internal/modules/vehicle/infrastructure/repository"
 )
@@ -46,6 +48,12 @@ func main() {
 		log.Fatal("failed to connect to database", zap.Error(err))
 	}
 	defer db.Close(conn)
+
+	tsConn, err := db.Connect(mustEnv("TIMESERIES_DATABASE_URL"))
+	if err != nil {
+		log.Fatal("failed to connect to timescaledb", zap.Error(err))
+	}
+	defer db.Close(tsConn)
 
 	for _, schema := range []string{"vehicle", "device"} {
 		if err := conn.Exec("CREATE SCHEMA IF NOT EXISTS " + schema).Error; err != nil {
@@ -87,6 +95,8 @@ stepPKI, err := pki.NewStepCAClient(
 	repo := vehiclerepository.NewGormRepository(conn)
 	modelRepo := vehiclerepository.NewGormModelRepository(conn)
 	deviceRepo := devicerepository.NewGormRepository(conn)
+	telemetryRepo := telemetryrepository.NewGormRepository(tsConn)
+	dtcRepo := telemetryrepository.NewGormDTCRepository(tsConn)
 
 	validate := validator.New()
 	validate.RegisterValidation("vin", func(fl validator.FieldLevel) bool {
@@ -104,6 +114,11 @@ stepPKI, err := pki.NewStepCAClient(
 		deviceusecase.NewCreateDevice(deviceRepo, stepPKI, validate),
 		deviceusecase.NewCommissionDevice(deviceRepo, repo, validate),
 		deviceusecase.NewDecommissionDevice(deviceRepo),
+	)
+
+	telemetry := handler.NewTelemetryHandler(
+		telemetryusecase.NewListTelemetry(telemetryRepo, repo),
+		telemetryusecase.NewListActiveDTCs(dtcRepo, repo),
 	)
 
 	vehicles := handler.NewVehicleHandler(
@@ -136,6 +151,8 @@ r := chi.NewRouter()
 		r.Get("/{id}", vehicles.Get)
 		r.Patch("/{id}", vehicles.Update)
 		r.Delete("/{id}", vehicles.Delete)
+		r.Get("/{id}/telemetry", telemetry.ListTelemetry)
+		r.Get("/{id}/dtcs", telemetry.ListDTCs)
 	})
 
 	r.Route("/vehicle-models", func(r chi.Router) {

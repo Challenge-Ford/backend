@@ -1,6 +1,10 @@
 package telemetrydto
 
-import "time"
+import (
+	"time"
+
+	telemetrydomain "torque/internal/modules/telemetry/domain"
+)
 
 // OBD-only output — GPS is not exposed via API.
 type TelemetryOutput struct {
@@ -36,13 +40,28 @@ type TelemetrySummaryOutput struct {
 	AvgBatteryVoltage *float64  `json:"avg_battery_voltage,omitempty"`
 }
 
-type DTCEventOutput struct {
-	ID       string     `json:"id"`
-	Code     string     `json:"code"`
-	OpenedAt time.Time  `json:"opened_at"`
-	ClosedAt *time.Time `json:"closed_at,omitempty"`
+type DTCOutput struct {
+	Code       string    `json:"code"`
+	DetectedAt time.Time `json:"detected_at"`
 }
 
 type DTCListOutput struct {
-	Data []*DTCEventOutput `json:"data"`
+	Data []*DTCOutput `json:"data"`
+}
+
+func ToTelemetryOutput(e *telemetrydomain.TelemetryEntry) *TelemetryOutput {
+	return &TelemetryOutput{
+		Time:           e.Time,
+		RPM:            e.RPM,
+		Speed:          e.Speed,
+		CoolantTemp:    e.CoolantTemp,
+		IntakeTemp:     e.IntakeTemp,
+		EngineLoad:     e.EngineLoad,
+		ThrottlePos:    e.ThrottlePos,
+		FuelLevel:      e.FuelLevel,
+		FuelTrimShort:  e.FuelTrimShort,
+		FuelTrimLong:   e.FuelTrimLong,
+		MAF:            e.MAF,
+		BatteryVoltage: e.BatteryVoltage,
+	}
 }
