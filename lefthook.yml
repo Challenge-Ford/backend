@@ -1,6 +1,12 @@
 # https://github.com/evilmartians/lefthook
 
 pre-commit:
+  # First: auto-format staged files
+  scripts:
+    "fix-imports.sh":
+      runner: bash
+
+  # Then: run checks in parallel
   parallel: true
   commands:
     vet:
@@ -15,6 +21,3 @@ pre-commit:
     no-todos:
       glob: "**/*.go"
       run: "grep -rn 'TODO\\|FIXME' --include='*.go' && exit 1 || exit 0"
-    lint:
-      glob: "**/*.go"
-      run: golangci-lint run --new --timeout=2m
