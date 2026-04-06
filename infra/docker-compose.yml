@@ -30,37 +30,6 @@ services:
       kratos:
         condition: service_started
 
-  kratos-migrate:
-    image: oryd/kratos:v26.2.0
-    restart: on-failure
-    command: -c /etc/config/kratos/kratos.yml migrate sql -e --yes
-    environment:
-      DSN: postgres://torque:torque@postgres:5432/torque?sslmode=disable&search_path=kratos
-    volumes:
-      - ./kratos:/etc/config/kratos:ro
-    networks:
-      - torque
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  kratos:
-    image: oryd/kratos:v26.2.0
-    restart: unless-stopped
-    command: serve -c /etc/config/kratos/kratos.yml --dev --watch-courier
-    environment:
-      DSN: postgres://torque:torque@postgres:5432/torque?sslmode=disable&search_path=kratos
-      LOG_LEVEL: info
-    volumes:
-      - ./kratos:/etc/config/kratos:ro
-    networks:
-      - torque
-    depends_on:
-      kratos-migrate:
-        condition: service_completed_successfully
-      postgres:
-        condition: service_healthy
-
   timescaledb:
     image: timescale/timescaledb:latest-pg17
     restart: unless-stopped
@@ -80,7 +49,6 @@ services:
       start_period: 20s
     volumes:
       - timescaledb-data:/var/lib/postgresql/data:rw
-      - ./timescaledb/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
       - torque
 
@@ -103,9 +71,59 @@ services:
       start_period: 20s
     volumes:
       - postgres-data:/var/lib/postgresql/data:rw
-      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
       - torque
+
+  kratos-postgres:
+    image: postgres:17.2-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: kratos
+      POSTGRES_PASSWORD: kratos
+      POSTGRES_DB: kratos
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -d kratos -U kratos
+      interval: 10s
+      timeout: 30s
+      retries: 10
+      start_period: 20s
+    volumes:
+      - kratos-postgres-data:/var/lib/postgresql/data:rw
+    networks:
+      - torque
+
+  kratos-migrate:
+    image: oryd/kratos:v26.2.0
+    restart: on-failure
+    command: -c /etc/config/kratos/kratos.yml migrate sql -e --yes
+    environment:
+      DSN: postgres://kratos:kratos@kratos-postgres:5432/kratos?sslmode=disable
+    volumes:
+      - ./kratos:/etc/config/kratos:ro
+    networks:
+      - torque
+    depends_on:
+      kratos-postgres:
+        condition: service_healthy
+
+  kratos:
+    image: oryd/kratos:v26.2.0
+    restart: unless-stopped
+    command: serve -c /etc/config/kratos/kratos.yml --dev --watch-courier
+    environment:
+      DSN: postgres://kratos:kratos@kratos-postgres:5432/kratos?sslmode=disable
+      LOG_LEVEL: info
+    volumes:
+      - ./kratos:/etc/config/kratos:ro
+    networks:
+      - torque
+    depends_on:
+      kratos-migrate:
+        condition: service_completed_successfully
+      kratos-postgres:
+        condition: service_healthy
 
   minio:
     image: minio/minio:latest
@@ -114,17 +132,41 @@ services:
     environment:
       MINIO_ROOT_USER: torque
       MINIO_ROOT_PASSWORD: torque123
-      MINIO_BROWSER_REDIRECT_URL: http://localhost/minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
     volumes:
       - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - torque
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+        mc alias set local http://minio:9000 torque torque123;
+        mc mb local/vehicle-models --ignore-existing;
+        mc anonymous set download local/vehicle-models;
+        mc cp /models/* local/vehicle-models/;
+      "
+    volumes:
+      - ./minio:/models:ro
     networks:
       - torque
 
   mailhog:
     image: mailhog/mailhog:latest
     restart: unless-stopped
-    environment:
-      MH_UI_WEB_PATH: mailhog
+    ports:
+      - "8025:8025"
     networks:
       - torque
 
@@ -138,13 +180,11 @@ services:
       DOCKER_STEPCA_INIT_PROVISIONER_NAME: "torque"
       DOCKER_STEPCA_INIT_PASSWORD_FILE: /run/secrets/ca-password
       DOCKER_STEPCA_INIT_PROVISIONER_PASSWORD_FILE: /run/secrets/ca-password
-    ports:
-      - "9000:9000"
     volumes:
       - step-ca-data:/home/step
       - ./step-ca/password.txt:/run/secrets/ca-password:ro
     healthcheck:
-      test: ["CMD", "step", "ca", "health", "--ca-url=https://localhost:9000", "--root=/home/step/certs/root_ca.crt"]
+      test: ["CMD-SHELL", "step ca health --ca-url=https://step-ca:9000 --root=/home/step/certs/root_ca.crt"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -172,6 +212,7 @@ networks:
 
 volumes:
   postgres-data:
+  kratos-postgres-data:
   timescaledb-data:
   minio-data:
   rabbitmq-data:

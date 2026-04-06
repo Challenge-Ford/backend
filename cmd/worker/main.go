@@ -8,7 +8,6 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"go.uber.org/zap"
@@ -61,10 +60,6 @@ func main() {
 	}
 	defer tsPool.Close()
 
-	if err := migrate(ctx, tsPool); err != nil {
-		log.Fatal("migration failed", zap.Error(err))
-	}
-
 	amqpConn, err := amqp.Dial(mustEnv("RABBITMQ_URL"))
 	if err != nil {
 		log.Fatal("failed to connect to rabbitmq", zap.Error(err))
@@ -107,52 +102,6 @@ func main() {
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 	<-stop
 	log.Info("shutting down")
-}
-
-func migrate(ctx context.Context, pool *pgxpool.Pool) error {
-	statements := []string{
-		`CREATE TABLE IF NOT EXISTS telemetry_entries (
-			time            TIMESTAMPTZ      NOT NULL,
-			device_id       UUID             NOT NULL,
-			vin             TEXT             NOT NULL,
-			lat             DOUBLE PRECISION,
-			lng             DOUBLE PRECISION,
-			alt             DOUBLE PRECISION,
-			gps_speed       DOUBLE PRECISION,
-			heading         DOUBLE PRECISION,
-			hdop            DOUBLE PRECISION,
-			rpm             INTEGER,
-			speed           INTEGER,
-			coolant_temp    DOUBLE PRECISION,
-			intake_temp     DOUBLE PRECISION,
-			engine_load     DOUBLE PRECISION,
-			throttle_pos    DOUBLE PRECISION,
-			fuel_level      DOUBLE PRECISION,
-			fuel_trim_short DOUBLE PRECISION,
-			fuel_trim_long  DOUBLE PRECISION,
-			maf             DOUBLE PRECISION,
-			battery_voltage DOUBLE PRECISION,
-			PRIMARY KEY (time, device_id)
-		)`,
-		`SELECT create_hypertable('telemetry_entries', 'time', if_not_exists => true)`,
-		`CREATE INDEX IF NOT EXISTS idx_telemetry_entries_vin_time ON telemetry_entries (vin, time DESC)`,
-		`CREATE TABLE IF NOT EXISTS dtc_entries (
-			time      TIMESTAMPTZ NOT NULL,
-			device_id UUID        NOT NULL,
-			vin       TEXT        NOT NULL,
-			code      TEXT        NOT NULL,
-			status    TEXT        NOT NULL
-		)`,
-		`SELECT create_hypertable('dtc_entries', 'time', if_not_exists => true)`,
-		`CREATE INDEX IF NOT EXISTS idx_dtc_entries_vin_code_time ON dtc_entries (vin, code, time DESC)`,
-	}
-
-	for _, sql := range statements {
-		if _, err := pool.Exec(ctx, sql); err != nil {
-			return fmt.Errorf("migration failed: %w", err)
-		}
-	}
-	return nil
 }
 
 func consume(log *zap.Logger, ch *amqp.Channel, queue string, handle func([]byte) error) {

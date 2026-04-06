@@ -8,7 +8,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 	"go.uber.org/zap"
 	"torque/cmd/api/handler"
@@ -59,10 +58,6 @@ func main() {
 		log.Fatal("failed to connect to timescaledb", zap.Error(err))
 	}
 	defer tsPool.Close()
-
-	if err := runMigrations(ctx, pool); err != nil {
-		log.Fatal("migration failed", zap.Error(err))
-	}
 
 	stepPKI, err := pki.NewStepCAClient(
 		mustEnv("STEP_CA_URL"),
@@ -162,93 +157,4 @@ func main() {
 	if err := http.ListenAndServe(":"+port, r); err != nil {
 		log.Fatal("failed to serve", zap.Error(err))
 	}
-}
-
-func runMigrations(ctx context.Context, pool *pgxpool.Pool) error {
-	tx, err := pool.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("begin transaction: %w", err)
-	}
-	defer tx.Rollback(ctx)
-
-	stmts := []string{
-		// Schemas
-		`CREATE SCHEMA IF NOT EXISTS vehicle`,
-		`CREATE SCHEMA IF NOT EXISTS device`,
-
-		// vehicle_models
-		`CREATE TABLE IF NOT EXISTS vehicle.vehicle_models (
-			id   UUID PRIMARY KEY,
-			name VARCHAR(255) NOT NULL UNIQUE,
-			type VARCHAR(255) NOT NULL
-		)`,
-
-		// vehicle_model_years
-		`CREATE TABLE IF NOT EXISTS vehicle.vehicle_model_years (
-			id         UUID PRIMARY KEY,
-			model_id   UUID NOT NULL REFERENCES vehicle.vehicle_models(id),
-			year       INT NOT NULL,
-			model_url  TEXT
-		)`,
-
-		// vehicle_model_year_colors
-		`CREATE TABLE IF NOT EXISTS vehicle.vehicle_model_year_colors (
-			id            UUID PRIMARY KEY,
-			model_year_id UUID NOT NULL REFERENCES vehicle.vehicle_model_years(id),
-			name          VARCHAR(100) NOT NULL,
-			hex           VARCHAR(7) NOT NULL
-		)`,
-
-		// vehicles
-		`CREATE TABLE IF NOT EXISTS vehicle.vehicles (
-			id             UUID PRIMARY KEY,
-			customer_id    UUID,
-			model_year_id  UUID NOT NULL REFERENCES vehicle.vehicle_model_years(id),
-			vin            VARCHAR(17) NOT NULL,
-			plate          VARCHAR(7) NOT NULL,
-			color          VARCHAR(7) NOT NULL,
-			created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-			updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-			created_by     UUID NOT NULL,
-			updated_by     UUID NOT NULL,
-			deleted_at     TIMESTAMPTZ,
-			deleted_by     UUID
-		)`,
-
-		// devices
-		`CREATE TABLE IF NOT EXISTS device.devices (
-			id              UUID PRIMARY KEY,
-			name            VARCHAR(255) NOT NULL,
-			vehicle_id      UUID REFERENCES vehicle.vehicles(id),
-			certificate_cn  VARCHAR(255) NOT NULL,
-			certificate_sn  VARCHAR(255) NOT NULL,
-			created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-			updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-			created_by      UUID NOT NULL,
-			updated_by      UUID NOT NULL,
-			deleted_at      TIMESTAMPTZ,
-			deleted_by      UUID
-		)`,
-
-		// Indexes
-		`CREATE UNIQUE INDEX IF NOT EXISTS idx_vehicle_model_years_unique
-			ON vehicle.vehicle_model_years (model_id, year)`,
-		`CREATE UNIQUE INDEX IF NOT EXISTS idx_vehicles_vin_active
-			ON vehicle.vehicles (vin) WHERE deleted_at IS NULL`,
-		`CREATE UNIQUE INDEX IF NOT EXISTS idx_vehicles_plate_active
-			ON vehicle.vehicles (plate) WHERE deleted_at IS NULL`,
-		`CREATE UNIQUE INDEX IF NOT EXISTS idx_devices_name
-			ON device.devices (name)`,
-		`CREATE UNIQUE INDEX IF NOT EXISTS idx_devices_certificate_cn
-			ON device.devices (certificate_cn)`,
-		`CREATE UNIQUE INDEX IF NOT EXISTS idx_devices_certificate_sn
-			ON device.devices (certificate_sn)`,
-	}
-
-	for _, sql := range stmts {
-		if _, err := tx.Exec(ctx, sql); err != nil {
-			return fmt.Errorf("migration: %s: %w", sql, err)
-		}
-	}
-	return tx.Commit(ctx)
 }
