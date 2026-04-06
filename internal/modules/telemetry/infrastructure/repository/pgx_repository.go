@@ -60,7 +60,7 @@ func (r *PgxRepository) Latest(ctx context.Context, vin string) (*telemetrydomai
 }
 
 func (r *PgxRepository) List(ctx context.Context, vin string, from, to *time.Time, limit int, after *time.Time) ([]*telemetrydomain.TelemetryEntry, error) {
-	args := []any{vin, limit}
+	args := []any{vin}
 	q := `
 		SELECT ` + selectFields + `
 		FROM telemetry_entries
@@ -82,6 +82,7 @@ func (r *PgxRepository) List(ctx context.Context, vin string, from, to *time.Tim
 		argIdx++
 	}
 	q += ` ORDER BY time ASC LIMIT $` + strconv.Itoa(argIdx)
+	args = append(args, limit)
 
 	rows, err := r.pool.Query(ctx, q, args...)
 	if err != nil {

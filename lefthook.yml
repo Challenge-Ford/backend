@@ -15,3 +15,6 @@ pre-commit:
     no-todos:
       glob: "**/*.go"
       run: "grep -rn 'TODO\\|FIXME' --include='*.go' && exit 1 || exit 0"
+    lint:
+      glob: "**/*.go"
+      run: golangci-lint run --new --timeout=2m

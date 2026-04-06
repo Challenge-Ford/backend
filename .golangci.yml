@@ -1,0 +1,37 @@
+# https://golangci-lint.run/
+run:
+  timeout: 2m
+
+linters:
+  disable-all: true
+  enable:
+    # correctness
+    - errcheck
+    - govet
+    - staticcheck
+    - unused
+    # style
+    - revive
+    - gofmt
+    - goimports
+    - ineffassign
+    - unconvert
+    # complexity
+    - cyclop
+    - gocognit
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+  govet:
+    enable-all: true
+    disable:
+      - fieldalignment
+  revive:
+    rules:
+      - name: unused-parameter
+        disabled: true
+  cyclop:
+    max-complexity: 12
+  gocognit:
+    min-complexity: 20

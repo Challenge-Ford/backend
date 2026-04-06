@@ -126,9 +126,14 @@ func main() {
 		vehicleusecase.NewListVehicleModelYears(modelRepo),
 	)
 
+	health := handler.NewHealthHandler(pool, tsPool)
+
 	r := chi.NewRouter()
 	r.Use(middleware.Logger(log))
 	r.Use(middleware.Auth)
+
+	r.Get("/healthz", health.Liveness)
+	r.Get("/readyz", health.Readiness)
 
 	r.Route("/devices", func(r chi.Router) {
 		r.Get("/", devices.List)
