@@ -26,7 +26,7 @@ func (uc *RecordTelemetryUseCase) Execute(ctx context.Context, input telemetrydt
 		return apperr.NotFound("commissioned device for vin " + input.VIN)
 	}
 
-	return uc.repo.Insert(ctx, &telemetrydomain.TelemetryEntry{
+	if err := uc.repo.Insert(ctx, &telemetrydomain.TelemetryEntry{
 		Time:           input.Time.UTC(),
 		DeviceID:       device.ID,
 		VIN:            input.VIN,
@@ -47,5 +47,8 @@ func (uc *RecordTelemetryUseCase) Execute(ctx context.Context, input telemetrydt
 		FuelTrimLong:   input.FuelTrimLong,
 		MAF:            input.MAF,
 		BatteryVoltage: input.BatteryVoltage,
-	})
+	}); err != nil {
+		return apperr.Internal("failed to insert telemetry entry", err)
+	}
+	return nil
 }

@@ -139,11 +139,17 @@ func (c *StepCAClient) Issue(ctx context.Context, commonName string) (*IssuedCer
 		return nil, err
 	}
 
-	body, _ := json.Marshal(map[string]any{
+	body, err := json.Marshal(map[string]any{
 		"csr": string(csrPEM),
 		"ott": token,
 	})
-	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, c.caURL+"/1.0/sign", bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("pki: marshal sign request body: %w", err)
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.caURL+"/1.0/sign", bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("pki: create sign request: %w", err)
+	}
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.httpClient.Do(req)
@@ -188,12 +194,18 @@ func (c *StepCAClient) Revoke(ctx context.Context, serialNumber string) error {
 		return err
 	}
 
-	body, _ := json.Marshal(map[string]any{
+	body, err := json.Marshal(map[string]any{
 		"serial":     serialNumber,
 		"ott":        token,
 		"reasonCode": 0,
 	})
-	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, c.caURL+"/1.0/revoke", bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("pki: marshal revoke request body: %w", err)
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.caURL+"/1.0/revoke", bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("pki: create revoke request: %w", err)
+	}
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.httpClient.Do(req)

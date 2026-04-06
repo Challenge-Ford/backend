@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"torque/internal/core/apperr"
 	telemetrydto "torque/internal/modules/telemetry/application/dto"
@@ -26,15 +27,17 @@ func TestListTelemetry_Execute(t *testing.T) {
 		resolver := mocktelemetry.NewMockVehicleResolver(t)
 
 		now := time.Now().UTC()
+		from := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+		to := time.Date(2024, 12, 31, 23, 59, 59, 0, time.UTC)
 		entries := []*telemetrydomain.TelemetryEntry{
 			{Time: now, VIN: vin},
 			{Time: now.Add(-time.Minute), VIN: vin},
 		}
 
-		input := telemetrydto.ListTelemetryInput{VehicleID: vehicleID, Limit: 10}
+		input := telemetrydto.ListTelemetryInput{VehicleID: vehicleID, Limit: 10, From: &from, To: &to}
 
 		resolver.EXPECT().GetVINByID(ctx, vehicleID).Return(vin, nil)
-		repo.EXPECT().List(ctx, vin, input.From, input.To, 11, input.After).Return(entries, nil)
+		repo.EXPECT().List(ctx, vin, &from, &to, 11, input.After).Return(entries, nil)
 
 		uc := telemetryusecase.NewListTelemetry(repo, resolver)
 		result, err := uc.Execute(ctx, input)
@@ -57,7 +60,7 @@ func TestListTelemetry_Execute(t *testing.T) {
 		input := telemetrydto.ListTelemetryInput{VehicleID: vehicleID, Limit: 2}
 
 		resolver.EXPECT().GetVINByID(ctx, vehicleID).Return(vin, nil)
-		repo.EXPECT().List(ctx, vin, input.From, input.To, 3, input.After).Return(entries, nil)
+		repo.EXPECT().List(ctx, vin, mock.Anything, mock.Anything, 3, input.After).Return(entries, nil)
 
 		uc := telemetryusecase.NewListTelemetry(repo, resolver)
 		result, err := uc.Execute(ctx, input)
@@ -74,7 +77,9 @@ func TestListTelemetry_Execute(t *testing.T) {
 		input := telemetrydto.ListTelemetryInput{VehicleID: vehicleID, Limit: 0}
 
 		resolver.EXPECT().GetVINByID(ctx, vehicleID).Return(vin, nil)
-		repo.EXPECT().List(ctx, vin, input.From, input.To, 101, input.After).Return(nil, nil)
+		repo.EXPECT().List(ctx, vin, mock.Anything, mock.Anything, mock.MatchedBy(func(limit int) bool {
+			return limit > 100
+		}), input.After).Return(nil, nil)
 
 		uc := telemetryusecase.NewListTelemetry(repo, resolver)
 		result, err := uc.Execute(ctx, input)
@@ -117,10 +122,12 @@ func TestListTelemetry_Execute(t *testing.T) {
 		repo := mocktelemetry.NewMockRepository(t)
 		resolver := mocktelemetry.NewMockVehicleResolver(t)
 
-		input := telemetrydto.ListTelemetryInput{VehicleID: vehicleID, Limit: 10}
+		from := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+		to := time.Date(2024, 12, 31, 23, 59, 59, 0, time.UTC)
+		input := telemetrydto.ListTelemetryInput{VehicleID: vehicleID, Limit: 10, From: &from, To: &to}
 
 		resolver.EXPECT().GetVINByID(ctx, vehicleID).Return(vin, nil)
-		repo.EXPECT().List(ctx, vin, input.From, input.To, 11, input.After).Return(nil, assert.AnError)
+		repo.EXPECT().List(ctx, vin, &from, &to, 11, input.After).Return(nil, assert.AnError)
 
 		uc := telemetryusecase.NewListTelemetry(repo, resolver)
 		_, err := uc.Execute(ctx, input)

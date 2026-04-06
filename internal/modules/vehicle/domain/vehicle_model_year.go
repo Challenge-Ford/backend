@@ -48,7 +48,9 @@ type VehicleModelYear struct {
 	ModelID  VehicleModelID           `gorm:"type:uuid;not null;index"`
 	Year     int                      `gorm:"not null"`
 	ModelURL *string                  `gorm:"type:text"`
-	Colors   []VehicleModelYearColor  `gorm:"foreignKey:ModelYearID"`
+	// Colors is nil when no colors are associated, or an empty slice when
+	// preloaded but no rows exist. Both are safe to range over.
+	Colors []VehicleModelYearColor  `gorm:"foreignKey:ModelYearID"`
 	Model    *VehicleModel            `gorm:"foreignKey:ModelID"`
 }
 

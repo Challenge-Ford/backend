@@ -28,11 +28,14 @@ func (uc *GetVehicleUseCase) Execute(ctx context.Context, id vehicledomain.Vehic
 
 	out := vehicledto.ToVehicleOutput(vehicle)
 
+	// dtcMap returns true only for VINs with at least one open DTC.
+	// Missing VINs in the map implicitly mean no active DTCs (false).
 	dtcMap, err := uc.telemetryResolver.HasActiveDTCs(ctx, []string{string(vehicle.VIN)})
 	if err != nil {
 		return nil, apperr.Internal("failed to check active dtcs", err)
 	}
-	out.HasActiveDTCs = dtcMap[string(vehicle.VIN)]
+	_, hasActive := dtcMap[string(vehicle.VIN)]
+	out.HasActiveDTCs = hasActive
 
 	return out, nil
 }

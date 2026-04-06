@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"gorm.io/gorm"
 	"torque/internal/core/apperr"
+	"torque/internal/core/db"
 	"torque/internal/core/pki"
 	devicedto "torque/internal/modules/device/application/dto"
 	deviceusecase "torque/internal/modules/device/application/usecase"
@@ -63,7 +63,7 @@ func TestCreateDevice_Execute(t *testing.T) {
 			Name:          "TRQ-001",
 			CertificateSN: "old-sn",
 		}
-		deleted.DeletedAt = gorm.DeletedAt{Valid: true}
+		deleted.DeletedAt = db.SoftDeletedAt{Valid: true}
 
 		repo.EXPECT().GetByName(ctx, "TRQ-001").Return(deleted, nil)
 		pkiMock.EXPECT().Revoke(ctx, "old-sn").Return(nil)
@@ -109,13 +109,71 @@ func TestCreateDevice_Execute(t *testing.T) {
 		assert.Equal(t, apperr.KindValidation, appErr.Kind)
 	})
 
-	t.Run("returns internal error when pki issue fails", func(t *testing.T) {
+	t.Run("returns internal error when GetByName fails", func(t *testing.T) {
+		repo := mockdevice.NewMockRepository(t)
+		pkiMock := mockdevice.NewMockPKI(t)
+		ctx := authCtx()
+
+		repo.EXPECT().GetByName(ctx, "TRQ-001").Return(nil, assert.AnError)
+
+		uc := deviceusecase.NewCreateDevice(repo, pkiMock, newValidate())
+		_, err := uc.Execute(ctx, input)
+
+		require.Error(t, err)
+		var appErr *apperr.Error
+		require.True(t, errors.As(err, &appErr))
+		assert.Equal(t, apperr.KindInternal, appErr.Kind)
+	})
+
+	t.Run("returns internal error when PKI issue fails", func(t *testing.T) {
 		repo := mockdevice.NewMockRepository(t)
 		pkiMock := mockdevice.NewMockPKI(t)
 		ctx := authCtx()
 
 		repo.EXPECT().GetByName(ctx, "TRQ-001").Return(nil, nil)
 		pkiMock.EXPECT().Issue(ctx, mock.AnythingOfType("string")).Return(nil, assert.AnError)
+
+		uc := deviceusecase.NewCreateDevice(repo, pkiMock, newValidate())
+		_, err := uc.Execute(ctx, input)
+
+		require.Error(t, err)
+		var appErr *apperr.Error
+		require.True(t, errors.As(err, &appErr))
+		assert.Equal(t, apperr.KindInternal, appErr.Kind)
+	})
+
+	t.Run("returns internal error when Save fails", func(t *testing.T) {
+		repo := mockdevice.NewMockRepository(t)
+		pkiMock := mockdevice.NewMockPKI(t)
+		ctx := authCtx()
+
+		repo.EXPECT().GetByName(ctx, "TRQ-001").Return(nil, nil)
+		pkiMock.EXPECT().Issue(ctx, mock.AnythingOfType("string")).Return(issuedCert, nil)
+		repo.EXPECT().Save(ctx, mock.Anything).Return(assert.AnError)
+
+		uc := deviceusecase.NewCreateDevice(repo, pkiMock, newValidate())
+		_, err := uc.Execute(ctx, input)
+
+		require.Error(t, err)
+		var appErr *apperr.Error
+		require.True(t, errors.As(err, &appErr))
+		assert.Equal(t, apperr.KindInternal, appErr.Kind)
+	})
+
+	t.Run("returns internal error when PKI revoke fails during reissue", func(t *testing.T) {
+		repo := mockdevice.NewMockRepository(t)
+		pkiMock := mockdevice.NewMockPKI(t)
+		ctx := authCtx()
+
+		deleted := &devicedomain.Device{
+			ID:            devicedomain.NewDeviceID(),
+			Name:          "TRQ-001",
+			CertificateSN: "old-sn",
+		}
+		deleted.DeletedAt = db.SoftDeletedAt{Valid: true}
+
+		repo.EXPECT().GetByName(ctx, "TRQ-001").Return(deleted, nil)
+		pkiMock.EXPECT().Revoke(ctx, "old-sn").Return(assert.AnError)
 
 		uc := deviceusecase.NewCreateDevice(repo, pkiMock, newValidate())
 		_, err := uc.Execute(ctx, input)

@@ -35,15 +35,19 @@ func (uc *CreateVehicleUseCase) Execute(ctx context.Context, input vehicledto.Cr
 		return nil, apperr.NotFound("vehicle model year")
 	}
 
-	if existing, err := uc.repo.GetByVIN(ctx, vehicledomain.VIN(input.VIN)); err != nil {
+	existing, err := uc.repo.GetByVIN(ctx, vehicledomain.VIN(input.VIN))
+	if err != nil {
 		return nil, apperr.Internal("failed to check VIN", err)
-	} else if existing != nil {
+	}
+	if existing != nil {
 		return nil, apperr.Conflict("vehicle with this VIN already exists")
 	}
 
-	if existing, err := uc.repo.GetByPlate(ctx, vehicledomain.Plate(input.Plate)); err != nil {
+	existing, err = uc.repo.GetByPlate(ctx, vehicledomain.Plate(input.Plate))
+	if err != nil {
 		return nil, apperr.Internal("failed to check plate", err)
-	} else if existing != nil {
+	}
+	if existing != nil {
 		return nil, apperr.Conflict("vehicle with this plate already exists")
 	}
 

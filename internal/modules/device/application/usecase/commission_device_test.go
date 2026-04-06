@@ -48,6 +48,25 @@ func TestCommissionDevice_Execute(t *testing.T) {
 		assert.NotNil(t, out)
 	})
 
+	t.Run("succeeds when vehicle already has this same device", func(t *testing.T) {
+		repo := mockdevice.NewMockRepository(t)
+		resolver := mockdevice.NewMockVehicleResolver(t)
+		ctx := authCtx()
+
+		alreadyCommissioned := &devicedomain.Device{ID: deviceID, Name: "device-01", VehicleID: &vehicleID}
+
+		repo.EXPECT().GetByID(ctx, deviceID).Return(alreadyCommissioned, nil)
+		resolver.EXPECT().Exists(ctx, vehicleID).Return(true, nil)
+		repo.EXPECT().GetByVehicleID(ctx, vehicleID).Return(alreadyCommissioned, nil)
+		repo.EXPECT().Save(ctx, mock.Anything).Return(nil)
+
+		uc := deviceusecase.NewCommissionDevice(repo, resolver, validate)
+		out, err := uc.Execute(ctx, deviceID, input)
+
+		require.NoError(t, err)
+		assert.NotNil(t, out)
+	})
+
 	t.Run("returns not found when device does not exist", func(t *testing.T) {
 		repo := mockdevice.NewMockRepository(t)
 		resolver := mockdevice.NewMockVehicleResolver(t)
@@ -101,6 +120,36 @@ func TestCommissionDevice_Execute(t *testing.T) {
 		assert.Equal(t, apperr.KindConflict, appErr.Kind)
 	})
 
+	t.Run("returns validation error for invalid UUID", func(t *testing.T) {
+		repo := mockdevice.NewMockRepository(t)
+		resolver := mockdevice.NewMockVehicleResolver(t)
+		ctx := authCtx()
+
+		uc := deviceusecase.NewCommissionDevice(repo, resolver, validate)
+		_, err := uc.Execute(ctx, deviceID, devicedto.CommissionDeviceInput{VehicleID: "not-a-uuid"})
+
+		require.Error(t, err)
+		var appErr *apperr.Error
+		require.True(t, errors.As(err, &appErr))
+		assert.Equal(t, apperr.KindValidation, appErr.Kind)
+	})
+
+	t.Run("returns internal error when GetByID fails", func(t *testing.T) {
+		repo := mockdevice.NewMockRepository(t)
+		resolver := mockdevice.NewMockVehicleResolver(t)
+		ctx := authCtx()
+
+		repo.EXPECT().GetByID(ctx, deviceID).Return(nil, assert.AnError)
+
+		uc := deviceusecase.NewCommissionDevice(repo, resolver, validate)
+		_, err := uc.Execute(ctx, deviceID, input)
+
+		require.Error(t, err)
+		var appErr *apperr.Error
+		require.True(t, errors.As(err, &appErr))
+		assert.Equal(t, apperr.KindInternal, appErr.Kind)
+	})
+
 	t.Run("returns internal error when resolver fails", func(t *testing.T) {
 		repo := mockdevice.NewMockRepository(t)
 		resolver := mockdevice.NewMockVehicleResolver(t)
@@ -108,6 +157,43 @@ func TestCommissionDevice_Execute(t *testing.T) {
 
 		repo.EXPECT().GetByID(ctx, deviceID).Return(device, nil)
 		resolver.EXPECT().Exists(ctx, vehicleID).Return(false, assert.AnError)
+
+		uc := deviceusecase.NewCommissionDevice(repo, resolver, validate)
+		_, err := uc.Execute(ctx, deviceID, input)
+
+		require.Error(t, err)
+		var appErr *apperr.Error
+		require.True(t, errors.As(err, &appErr))
+		assert.Equal(t, apperr.KindInternal, appErr.Kind)
+	})
+
+	t.Run("returns internal error when GetByVehicleID fails", func(t *testing.T) {
+		repo := mockdevice.NewMockRepository(t)
+		resolver := mockdevice.NewMockVehicleResolver(t)
+		ctx := authCtx()
+
+		repo.EXPECT().GetByID(ctx, deviceID).Return(device, nil)
+		resolver.EXPECT().Exists(ctx, vehicleID).Return(true, nil)
+		repo.EXPECT().GetByVehicleID(ctx, vehicleID).Return(nil, assert.AnError)
+
+		uc := deviceusecase.NewCommissionDevice(repo, resolver, validate)
+		_, err := uc.Execute(ctx, deviceID, input)
+
+		require.Error(t, err)
+		var appErr *apperr.Error
+		require.True(t, errors.As(err, &appErr))
+		assert.Equal(t, apperr.KindInternal, appErr.Kind)
+	})
+
+	t.Run("returns internal error when Save fails", func(t *testing.T) {
+		repo := mockdevice.NewMockRepository(t)
+		resolver := mockdevice.NewMockVehicleResolver(t)
+		ctx := authCtx()
+
+		repo.EXPECT().GetByID(ctx, deviceID).Return(device, nil)
+		resolver.EXPECT().Exists(ctx, vehicleID).Return(true, nil)
+		repo.EXPECT().GetByVehicleID(ctx, vehicleID).Return(nil, nil)
+		repo.EXPECT().Save(ctx, mock.Anything).Return(assert.AnError)
 
 		uc := deviceusecase.NewCommissionDevice(repo, resolver, validate)
 		_, err := uc.Execute(ctx, deviceID, input)

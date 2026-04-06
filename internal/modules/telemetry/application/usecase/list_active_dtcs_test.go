@@ -86,7 +86,7 @@ func TestListActiveDTCs_Execute(t *testing.T) {
 		assert.Equal(t, apperr.KindInternal, appErr.Kind)
 	})
 
-	t.Run("returns internal error when repository fails", func(t *testing.T) {
+	t.Run("returns internal error when ListActive fails", func(t *testing.T) {
 		repo := mocktelemetry.NewMockDTCRepository(t)
 		resolver := mocktelemetry.NewMockVehicleResolver(t)
 

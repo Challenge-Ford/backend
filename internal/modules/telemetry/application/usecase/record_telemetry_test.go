@@ -75,4 +75,30 @@ func TestRecordTelemetry_Execute(t *testing.T) {
 		require.True(t, errors.As(err, &appErr))
 		assert.Equal(t, apperr.KindInternal, appErr.Kind)
 	})
+
+	t.Run("returns internal error when Insert fails", func(t *testing.T) {
+		repo := mocktelemetry.NewMockRepository(t)
+		resolver := mocktelemetry.NewMockDeviceResolver(t)
+
+		ts := time.Now().UTC().Truncate(time.Second)
+		input := telemetrydto.RecordTelemetryInput{
+			Time: ts,
+			VIN:  vin,
+		}
+
+		resolver.EXPECT().GetCommissionedByVIN(ctx, vin).Return(resolvedDevice, nil)
+		repo.EXPECT().Insert(ctx, &telemetrydomain.TelemetryEntry{
+			Time:     ts,
+			DeviceID: deviceID,
+			VIN:      vin,
+		}).Return(assert.AnError)
+
+		uc := telemetryusecase.NewRecordTelemetry(repo, resolver)
+		err := uc.Execute(ctx, input)
+
+		require.Error(t, err)
+		var appErr *apperr.Error
+		require.True(t, errors.As(err, &appErr))
+		assert.Equal(t, apperr.KindInternal, appErr.Kind)
+	})
 }

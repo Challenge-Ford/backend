@@ -85,4 +85,38 @@ func TestDeleteVehicle_Execute(t *testing.T) {
 		require.True(t, errors.As(err, &appErr))
 		assert.Equal(t, apperr.KindInternal, appErr.Kind)
 	})
+
+	t.Run("returns internal error when GetByID fails", func(t *testing.T) {
+		repo := mockvehicle.NewMockRepository(t)
+		deviceResolver := mockvehicle.NewMockDeviceResolver(t)
+		ctx := authCtx()
+
+		repo.EXPECT().GetByID(ctx, vehicleID).Return(nil, assert.AnError)
+
+		uc := vehicleusecase.NewDeleteVehicle(repo, deviceResolver)
+		err := uc.Execute(ctx, vehicleID)
+
+		require.Error(t, err)
+		var appErr *apperr.Error
+		require.True(t, errors.As(err, &appErr))
+		assert.Equal(t, apperr.KindInternal, appErr.Kind)
+	})
+
+	t.Run("returns internal error when Save fails", func(t *testing.T) {
+		repo := mockvehicle.NewMockRepository(t)
+		deviceResolver := mockvehicle.NewMockDeviceResolver(t)
+		ctx := authCtx()
+
+		repo.EXPECT().GetByID(ctx, vehicleID).Return(existing, nil)
+		deviceResolver.EXPECT().HasCommissioned(ctx, uuid.UUID(vehicleID)).Return(false, nil)
+		repo.EXPECT().Save(ctx, existing).Return(assert.AnError)
+
+		uc := vehicleusecase.NewDeleteVehicle(repo, deviceResolver)
+		err := uc.Execute(ctx, vehicleID)
+
+		require.Error(t, err)
+		var appErr *apperr.Error
+		require.True(t, errors.As(err, &appErr))
+		assert.Equal(t, apperr.KindInternal, appErr.Kind)
+	})
 }

@@ -113,4 +113,53 @@ func TestUpdateVehicle_Execute(t *testing.T) {
 		require.True(t, errors.As(err, &appErr))
 		assert.Equal(t, apperr.KindBadRequest, appErr.Kind)
 	})
+
+	t.Run("returns bad request for invalid color", func(t *testing.T) {
+		repo := mockvehicle.NewMockRepository(t)
+		modelRepo := mockvehicle.NewMockModelRepository(t)
+		ctx := authCtx()
+
+		repo.EXPECT().GetByID(ctx, vehicleID).Return(existing, nil)
+
+		uc := vehicleusecase.NewUpdateVehicle(repo, modelRepo)
+		_, err := uc.Execute(ctx, vehicleID, vehicledto.UpdateVehicleInput{Color: "not-a-color"})
+
+		require.Error(t, err)
+		var appErr *apperr.Error
+		require.True(t, errors.As(err, &appErr))
+		assert.Equal(t, apperr.KindBadRequest, appErr.Kind)
+	})
+
+	t.Run("returns internal error when GetByID fails", func(t *testing.T) {
+		repo := mockvehicle.NewMockRepository(t)
+		modelRepo := mockvehicle.NewMockModelRepository(t)
+		ctx := authCtx()
+
+		repo.EXPECT().GetByID(ctx, vehicleID).Return(nil, assert.AnError)
+
+		uc := vehicleusecase.NewUpdateVehicle(repo, modelRepo)
+		_, err := uc.Execute(ctx, vehicleID, vehicledto.UpdateVehicleInput{Plate: "XYZ9E72"})
+
+		require.Error(t, err)
+		var appErr *apperr.Error
+		require.True(t, errors.As(err, &appErr))
+		assert.Equal(t, apperr.KindInternal, appErr.Kind)
+	})
+
+	t.Run("returns internal error when Save fails", func(t *testing.T) {
+		repo := mockvehicle.NewMockRepository(t)
+		modelRepo := mockvehicle.NewMockModelRepository(t)
+		ctx := authCtx()
+
+		repo.EXPECT().GetByID(ctx, vehicleID).Return(existing, nil)
+		repo.EXPECT().Save(ctx, mock.Anything).Return(assert.AnError)
+
+		uc := vehicleusecase.NewUpdateVehicle(repo, modelRepo)
+		_, err := uc.Execute(ctx, vehicleID, vehicledto.UpdateVehicleInput{Plate: "XYZ9E72"})
+
+		require.Error(t, err)
+		var appErr *apperr.Error
+		require.True(t, errors.As(err, &appErr))
+		assert.Equal(t, apperr.KindInternal, appErr.Kind)
+	})
 }

@@ -30,11 +30,14 @@ func (uc *RecordDTCUseCase) Execute(ctx context.Context, input telemetrydto.Reco
 		return apperr.NotFound("commissioned device for vin " + input.VIN)
 	}
 
-	return uc.repo.Insert(ctx, &telemetrydomain.DTCEntry{
+	if err := uc.repo.Insert(ctx, &telemetrydomain.DTCEntry{
 		Time:     input.Time.UTC(),
 		DeviceID: device.ID,
 		VIN:      input.VIN,
 		Code:     input.Code,
 		Status:   input.Status,
-	})
+	}); err != nil {
+		return apperr.Internal("failed to insert dtc entry", err)
+	}
+	return nil
 }

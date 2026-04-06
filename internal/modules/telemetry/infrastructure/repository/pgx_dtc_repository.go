@@ -57,7 +57,7 @@ func (r *PgxDTCRepository) HasActiveDTCs(ctx context.Context, vins []string) (ma
 		FROM (
 			SELECT DISTINCT ON (vin, code) vin, status
 			FROM dtc_entries
-			WHERE vin = ANY($1)
+			WHERE vin = ANY($1::text[])
 			ORDER BY vin, code, time DESC
 		) latest
 		WHERE status = 'opened'

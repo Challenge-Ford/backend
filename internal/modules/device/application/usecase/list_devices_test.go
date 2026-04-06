@@ -1,7 +1,6 @@
 package deviceusecase_test
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -16,7 +15,7 @@ import (
 )
 
 func TestListDevices_Execute(t *testing.T) {
-	ctx := context.Background()
+	ctx := authCtx()
 
 	devices := []*devicedomain.Device{
 		{ID: devicedomain.DeviceID(uuid.New()), Name: "TRQ-001"},

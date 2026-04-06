@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"torque/cmd/api/httperr"
+	"torque/internal/core/apperr"
 	"torque/internal/core/pagination"
 	vehicledto "torque/internal/modules/vehicle/application/dto"
 	vehicleusecase "torque/internal/modules/vehicle/application/usecase"
@@ -51,7 +52,7 @@ func (h *VehicleHandler) Create(w http.ResponseWriter, r *http.Request) {
 func (h *VehicleHandler) Get(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		httperr.Write(w, err)
+		httperr.Write(w, apperr.BadRequest("invalid vehicle id"))
 		return
 	}
 
@@ -83,7 +84,7 @@ func (h *VehicleHandler) List(w http.ResponseWriter, r *http.Request) {
 func (h *VehicleHandler) Update(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		httperr.Write(w, err)
+		httperr.Write(w, apperr.BadRequest("invalid vehicle id"))
 		return
 	}
 
@@ -105,7 +106,7 @@ func (h *VehicleHandler) Update(w http.ResponseWriter, r *http.Request) {
 func (h *VehicleHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		httperr.Write(w, err)
+		httperr.Write(w, apperr.BadRequest("invalid vehicle id"))
 		return
 	}
 

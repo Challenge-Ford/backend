@@ -12,4 +12,5 @@ type Repository interface {
 	GetByVIN(ctx context.Context, vin VIN) (*Vehicle, error)
 	GetByPlate(ctx context.Context, plate Plate) (*Vehicle, error)
 	List(ctx context.Context, page pagination.Page) ([]*Vehicle, int, error)
+	Exists(ctx context.Context, id VehicleID) (bool, error)
 }

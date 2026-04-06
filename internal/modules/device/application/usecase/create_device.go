@@ -2,11 +2,12 @@ package deviceusecase
 
 import (
 	"context"
+	"time"
 
 	"github.com/go-playground/validator/v10"
-	"gorm.io/gorm"
 	"torque/internal/core/appctx"
 	"torque/internal/core/apperr"
+	"torque/internal/core/db"
 	devicedto "torque/internal/modules/device/application/dto"
 	devicedomain "torque/internal/modules/device/domain"
 )
@@ -42,9 +43,11 @@ func (uc *CreateDeviceUseCase) Execute(ctx context.Context, input devicedto.Crea
 			return nil, apperr.Internal("failed to revoke old certificate", err)
 		}
 		device = existing
-		device.DeletedAt = gorm.DeletedAt{}
+		device.DeletedAt = db.SoftDeletedAt{}
 		device.DeletedBy = nil
 		device.VehicleID = nil
+		device.CreatedAt = time.Time{}
+		device.CreatedBy = auth.UserID
 	} else {
 		id := devicedomain.NewDeviceID()
 		device = &devicedomain.Device{

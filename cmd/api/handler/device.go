@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"torque/cmd/api/httperr"
+	"torque/internal/core/apperr"
 	"torque/internal/core/pagination"
 	devicedto "torque/internal/modules/device/application/dto"
 	deviceusecase "torque/internal/modules/device/application/usecase"
@@ -62,7 +63,7 @@ func (h *DeviceHandler) Create(w http.ResponseWriter, r *http.Request) {
 func (h *DeviceHandler) Commission(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		httperr.Write(w, err)
+		httperr.Write(w, apperr.BadRequest("invalid device id"))
 		return
 	}
 
@@ -84,7 +85,7 @@ func (h *DeviceHandler) Commission(w http.ResponseWriter, r *http.Request) {
 func (h *DeviceHandler) Decommission(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		httperr.Write(w, err)
+		httperr.Write(w, apperr.BadRequest("invalid device id"))
 		return
 	}
 

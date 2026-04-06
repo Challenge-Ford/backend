@@ -4,13 +4,14 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/google/uuid"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"torque/internal/core/apperr"
 	deviceusecase "torque/internal/modules/device/application/usecase"
 	devicedomain "torque/internal/modules/device/domain"
 	mockdevice "torque/mocks/device/domain"
+
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDeleteDevice_Execute(t *testing.T) {
@@ -61,6 +62,40 @@ func TestDeleteDevice_Execute(t *testing.T) {
 
 		repo.EXPECT().GetByID(ctx, deviceID).Return(device, nil)
 		pkiMock.EXPECT().Revoke(ctx, "sn-123").Return(assert.AnError)
+
+		uc := deviceusecase.NewDeleteDevice(repo, pkiMock)
+		err := uc.Execute(ctx, deviceID)
+
+		require.Error(t, err)
+		var appErr *apperr.Error
+		require.True(t, errors.As(err, &appErr))
+		assert.Equal(t, apperr.KindInternal, appErr.Kind)
+	})
+
+	t.Run("returns internal error when GetByID fails", func(t *testing.T) {
+		repo := mockdevice.NewMockRepository(t)
+		pkiMock := mockdevice.NewMockPKI(t)
+		ctx := authCtx()
+
+		repo.EXPECT().GetByID(ctx, deviceID).Return(nil, assert.AnError)
+
+		uc := deviceusecase.NewDeleteDevice(repo, pkiMock)
+		err := uc.Execute(ctx, deviceID)
+
+		require.Error(t, err)
+		var appErr *apperr.Error
+		require.True(t, errors.As(err, &appErr))
+		assert.Equal(t, apperr.KindInternal, appErr.Kind)
+	})
+
+	t.Run("returns internal error when Save fails", func(t *testing.T) {
+		repo := mockdevice.NewMockRepository(t)
+		pkiMock := mockdevice.NewMockPKI(t)
+		ctx := authCtx()
+
+		repo.EXPECT().GetByID(ctx, deviceID).Return(device, nil)
+		pkiMock.EXPECT().Revoke(ctx, "sn-123").Return(nil)
+		repo.EXPECT().Save(ctx, device).Return(assert.AnError)
 
 		uc := deviceusecase.NewDeleteDevice(repo, pkiMock)
 		err := uc.Execute(ctx, deviceID)

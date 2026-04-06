@@ -13,12 +13,17 @@ type findVehicle interface {
 	Execute(ctx context.Context, id vehicledomain.VehicleID) (*vehicledto.VehicleOutput, error)
 }
 
-type VehicleResolverAdapter struct {
-	findVehicle findVehicle
+type existsVehicle interface {
+	Execute(ctx context.Context, id vehicledomain.VehicleID) (bool, error)
 }
 
-func NewVehicleResolver(findVehicle findVehicle) *VehicleResolverAdapter {
-	return &VehicleResolverAdapter{findVehicle: findVehicle}
+type VehicleResolverAdapter struct {
+	findVehicle   findVehicle
+	existsVehicle existsVehicle
+}
+
+func NewVehicleResolver(findVehicle findVehicle, existsVehicle existsVehicle) *VehicleResolverAdapter {
+	return &VehicleResolverAdapter{findVehicle: findVehicle, existsVehicle: existsVehicle}
 }
 
 func (a *VehicleResolverAdapter) GetVINByID(ctx context.Context, vehicleID uuid.UUID) (string, error) {
@@ -33,9 +38,9 @@ func (a *VehicleResolverAdapter) GetVINByID(ctx context.Context, vehicleID uuid.
 }
 
 func (a *VehicleResolverAdapter) Exists(ctx context.Context, vehicleID uuid.UUID) (bool, error) {
-	out, err := a.findVehicle.Execute(ctx, vehicledomain.VehicleID(vehicleID))
+	exists, err := a.existsVehicle.Execute(ctx, vehicledomain.VehicleID(vehicleID))
 	if err != nil {
 		return false, fmt.Errorf("vehicle resolver: %w", err)
 	}
-	return out != nil, nil
+	return exists, nil
 }

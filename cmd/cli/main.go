@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -9,10 +10,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/joho/godotenv"
 	amqp "github.com/rabbitmq/amqp091-go"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 	"torque/internal/infrastructure/messaging"
 )
 
@@ -93,13 +93,14 @@ func runReset(_ []string) {
 		os.Exit(1)
 	}
 
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	conn, err := pgx.Connect(context.Background(), dsn)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "error: failed to connect to database:", err)
 		os.Exit(1)
 	}
+	defer conn.Close(context.Background())
 
-	if err := db.Exec("TRUNCATE TABLE telemetry_entries, dtc_entries").Error; err != nil {
+	if _, err := conn.Exec(context.Background(), "TRUNCATE TABLE telemetry_entries, dtc_entries"); err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		os.Exit(1)
 	}

@@ -97,4 +97,22 @@ func TestRecordDTC_Execute(t *testing.T) {
 		require.True(t, errors.As(err, &appErr))
 		assert.Equal(t, apperr.KindInternal, appErr.Kind)
 	})
+
+	t.Run("returns internal error when Insert fails", func(t *testing.T) {
+		repo := mocktelemetry.NewMockDTCRepository(t)
+		resolver := mocktelemetry.NewMockDeviceResolver(t)
+
+		resolver.EXPECT().GetCommissionedByVIN(ctx, vin).Return(resolvedDevice, nil)
+		repo.EXPECT().Insert(ctx, mock.MatchedBy(func(e *telemetrydomain.DTCEntry) bool {
+			return e.Code == "P0300" && e.Status == "opened"
+		})).Return(assert.AnError)
+
+		uc := telemetryusecase.NewRecordDTC(repo, resolver)
+		err := uc.Execute(ctx, telemetrydto.RecordDTCInput{VIN: vin, Code: "P0300", Status: "opened", Time: ts})
+
+		require.Error(t, err)
+		var appErr *apperr.Error
+		require.True(t, errors.As(err, &appErr))
+		assert.Equal(t, apperr.KindInternal, appErr.Kind)
+	})
 }

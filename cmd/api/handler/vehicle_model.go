@@ -6,6 +6,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"torque/cmd/api/httperr"
+	"torque/internal/core/apperr"
 	vehicleusecase "torque/internal/modules/vehicle/application/usecase"
 )
 
@@ -33,7 +34,7 @@ func (h *VehicleModelHandler) List(w http.ResponseWriter, r *http.Request) {
 func (h *VehicleModelHandler) ListYears(w http.ResponseWriter, r *http.Request) {
 	modelID, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		httperr.Write(w, err)
+		httperr.Write(w, apperr.BadRequest("invalid model id"))
 		return
 	}
 	output, err := h.listYears.Execute(r.Context(), modelID)

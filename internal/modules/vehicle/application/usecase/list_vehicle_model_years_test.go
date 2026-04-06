@@ -40,6 +40,20 @@ func TestListVehicleModelYears_Execute(t *testing.T) {
 		assert.Equal(t, 2023, result.Data[0].Year)
 	})
 
+	t.Run("returns empty list when model has no years", func(t *testing.T) {
+		modelRepo := mockvehicle.NewMockModelRepository(t)
+		ctx := authCtx()
+
+		modelRepo.EXPECT().GetModelByID(ctx, vehicledomain.VehicleModelID(modelID)).Return(model, nil)
+		modelRepo.EXPECT().ListModelYears(ctx, vehicledomain.VehicleModelID(modelID)).Return([]*vehicledomain.VehicleModelYear{}, nil)
+
+		uc := vehicleusecase.NewListVehicleModelYears(modelRepo)
+		result, err := uc.Execute(ctx, modelID)
+
+		require.NoError(t, err)
+		assert.Empty(t, result.Data)
+	})
+
 	t.Run("returns not found when model does not exist", func(t *testing.T) {
 		modelRepo := mockvehicle.NewMockModelRepository(t)
 		ctx := authCtx()
@@ -55,11 +69,27 @@ func TestListVehicleModelYears_Execute(t *testing.T) {
 		assert.Equal(t, apperr.KindNotFound, appErr.Kind)
 	})
 
-	t.Run("returns internal error when repository fails", func(t *testing.T) {
+	t.Run("returns internal error when GetModelByID fails", func(t *testing.T) {
 		modelRepo := mockvehicle.NewMockModelRepository(t)
 		ctx := authCtx()
 
 		modelRepo.EXPECT().GetModelByID(ctx, vehicledomain.VehicleModelID(modelID)).Return(nil, assert.AnError)
+
+		uc := vehicleusecase.NewListVehicleModelYears(modelRepo)
+		_, err := uc.Execute(ctx, modelID)
+
+		require.Error(t, err)
+		var appErr *apperr.Error
+		require.True(t, errors.As(err, &appErr))
+		assert.Equal(t, apperr.KindInternal, appErr.Kind)
+	})
+
+	t.Run("returns internal error when ListModelYears fails", func(t *testing.T) {
+		modelRepo := mockvehicle.NewMockModelRepository(t)
+		ctx := authCtx()
+
+		modelRepo.EXPECT().GetModelByID(ctx, vehicledomain.VehicleModelID(modelID)).Return(model, nil)
+		modelRepo.EXPECT().ListModelYears(ctx, vehicledomain.VehicleModelID(modelID)).Return(nil, assert.AnError)
 
 		uc := vehicleusecase.NewListVehicleModelYears(modelRepo)
 		_, err := uc.Execute(ctx, modelID)

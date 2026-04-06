@@ -9,8 +9,8 @@ import (
 
 type ListTelemetryInput struct {
 	VehicleID uuid.UUID
-	From      time.Time
-	To        time.Time
+	From      *time.Time
+	To        *time.Time
 	Limit     int
 	After     *time.Time
 }
@@ -44,7 +44,9 @@ type RecordDTCInput struct {
 	Time   time.Time
 }
 
-// OBD-only output — GPS is not exposed via API.
+// TelemetryOutput contains OBD-II data only.
+// GPS fields (Lat, Lng, Alt, GPSSpeed, Heading, HDOP) are intentionally
+// excluded from the API response for privacy and bandwidth reasons.
 type TelemetryOutput struct {
 	Time           time.Time `json:"time"`
 	RPM            *int      `json:"rpm,omitempty"`

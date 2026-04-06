@@ -2,6 +2,7 @@ package telemetryrepository
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -58,18 +59,29 @@ func (r *PgxRepository) Latest(ctx context.Context, vin string) (*telemetrydomai
 	return e, nil
 }
 
-func (r *PgxRepository) List(ctx context.Context, vin string, from, to time.Time, limit int, after *time.Time) ([]*telemetrydomain.TelemetryEntry, error) {
-	args := []any{vin, from, to, limit}
+func (r *PgxRepository) List(ctx context.Context, vin string, from, to *time.Time, limit int, after *time.Time) ([]*telemetrydomain.TelemetryEntry, error) {
+	args := []any{vin, limit}
 	q := `
 		SELECT ` + selectFields + `
 		FROM telemetry_entries
-		WHERE vin = $1 AND time >= $2 AND time <= $3`
-
-	if after != nil {
-		q += ` AND time > $5`
-		args = append(args, *after)
+		WHERE vin = $1`
+	argIdx := 2
+	if from != nil {
+		q += ` AND time >= $` + strconv.Itoa(argIdx)
+		args = append(args, *from)
+		argIdx++
 	}
-	q += ` ORDER BY time ASC LIMIT $4`
+	if to != nil {
+		q += ` AND time <= $` + strconv.Itoa(argIdx)
+		args = append(args, *to)
+		argIdx++
+	}
+	if after != nil {
+		q += ` AND time > $` + strconv.Itoa(argIdx)
+		args = append(args, *after)
+		argIdx++
+	}
+	q += ` ORDER BY time ASC LIMIT $` + strconv.Itoa(argIdx)
 
 	rows, err := r.pool.Query(ctx, q, args...)
 	if err != nil {

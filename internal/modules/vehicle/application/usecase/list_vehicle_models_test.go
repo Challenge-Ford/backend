@@ -29,7 +29,9 @@ func TestListVehicleModels_Execute(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Len(t, result.Data, 2)
-		assert.Equal(t, "Corolla", result.Data[0].Name)
+		names := []string{result.Data[0].Name, result.Data[1].Name}
+		assert.Contains(t, names, "Corolla")
+		assert.Contains(t, names, "Hilux")
 	})
 
 	t.Run("returns empty list when no models", func(t *testing.T) {

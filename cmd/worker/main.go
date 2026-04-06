@@ -49,11 +49,11 @@ func main() {
 
 	ctx := context.Background()
 
-	mainConn, err := db.Connect(mustEnv("DATABASE_URL"))
+	pool, err := db.ConnectPgx(ctx, mustEnv("DATABASE_URL"))
 	if err != nil {
 		log.Fatal("failed to connect to database", zap.Error(err))
 	}
-	defer db.Close(mainConn)
+	defer pool.Close()
 
 	tsPool, err := db.ConnectPgx(ctx, mustEnv("TIMESERIES_DATABASE_URL"))
 	if err != nil {
@@ -83,7 +83,7 @@ func main() {
 		}
 	}
 
-	deviceRepo := devicerepository.NewGormRepository(mainConn)
+	deviceRepo := devicerepository.NewRepository(pool)
 	telemetryRepo := telemetryrepository.NewPgxRepository(tsPool)
 	dtcRepo := telemetryrepository.NewPgxDTCRepository(tsPool)
 	findCommissionedByVIN := deviceusecase.NewFindCommissionedByVIN(deviceRepo)

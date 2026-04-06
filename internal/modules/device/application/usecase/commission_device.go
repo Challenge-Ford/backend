@@ -46,9 +46,11 @@ func (uc *CommissionDeviceUseCase) Execute(ctx context.Context, id devicedomain.
 		return nil, apperr.NotFound("vehicle")
 	}
 
-	if existing, err := uc.repo.GetByVehicleID(ctx, vehicleID); err != nil {
+	existing, err := uc.repo.GetByVehicleID(ctx, vehicleID)
+	if err != nil {
 		return nil, apperr.Internal("failed to check vehicle commission", err)
-	} else if existing != nil && existing.ID != device.ID {
+	}
+	if existing != nil && existing.ID != device.ID {
 		return nil, apperr.Conflict("vehicle already has a commissioned device")
 	}
 

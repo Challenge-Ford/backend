@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 	"torque/internal/core/db"
 	"torque/internal/core/id"
 )
@@ -48,6 +47,8 @@ func (v *VehicleID) Scan(src any) error {
 
 type Vehicle struct {
 	ID           VehicleID          `gorm:"type:uuid;primaryKey"`
+	// CustomerID links to an external customer management system.
+	// Stored as raw UUID — customer data is not resolved within this service.
 	CustomerID   *uuid.UUID         `gorm:"type:uuid;index"`
 	ModelYearID  VehicleModelYearID `gorm:"type:uuid;not null;index"`
 	ModelYear    *VehicleModelYear  `gorm:"foreignKey:ModelYearID"`
@@ -63,6 +64,6 @@ func (Vehicle) TableName() string {
 
 func (v *Vehicle) Delete(byUser uuid.UUID) {
 	now := time.Now()
-	v.DeletedAt = gorm.DeletedAt{Time: now, Valid: true}
+	v.DeletedAt = db.SoftDeletedAt{Time: now, Valid: true}
 	v.DeletedBy = &byUser
 }

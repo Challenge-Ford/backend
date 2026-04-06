@@ -38,6 +38,22 @@ func TestGetVehicle_Execute(t *testing.T) {
 		assert.True(t, out.HasActiveDTCs)
 	})
 
+	t.Run("returns vehicle when resolver returns empty map", func(t *testing.T) {
+		repo := mockvehicle.NewMockRepository(t)
+		telemetryResolver := mockvehicle.NewMockTelemetryResolver(t)
+		ctx := authCtx()
+
+		repo.EXPECT().GetByID(ctx, vehicleID).Return(existing, nil)
+		telemetryResolver.EXPECT().HasActiveDTCs(ctx, []string{string(existing.VIN)}).
+			Return(map[string]bool{}, nil)
+
+		uc := vehicleusecase.NewGetVehicle(repo, telemetryResolver)
+		out, err := uc.Execute(ctx, vehicleID)
+
+		require.NoError(t, err)
+		assert.False(t, out.HasActiveDTCs)
+	})
+
 	t.Run("returns not found when vehicle does not exist", func(t *testing.T) {
 		repo := mockvehicle.NewMockRepository(t)
 		telemetryResolver := mockvehicle.NewMockTelemetryResolver(t)
@@ -52,6 +68,22 @@ func TestGetVehicle_Execute(t *testing.T) {
 		var appErr *apperr.Error
 		require.True(t, errors.As(err, &appErr))
 		assert.Equal(t, apperr.KindNotFound, appErr.Kind)
+	})
+
+	t.Run("returns internal error when GetByID fails", func(t *testing.T) {
+		repo := mockvehicle.NewMockRepository(t)
+		telemetryResolver := mockvehicle.NewMockTelemetryResolver(t)
+		ctx := authCtx()
+
+		repo.EXPECT().GetByID(ctx, vehicleID).Return(nil, assert.AnError)
+
+		uc := vehicleusecase.NewGetVehicle(repo, telemetryResolver)
+		_, err := uc.Execute(ctx, vehicleID)
+
+		require.Error(t, err)
+		var appErr *apperr.Error
+		require.True(t, errors.As(err, &appErr))
+		assert.Equal(t, apperr.KindInternal, appErr.Kind)
 	})
 
 	t.Run("returns internal error when telemetry resolver fails", func(t *testing.T) {

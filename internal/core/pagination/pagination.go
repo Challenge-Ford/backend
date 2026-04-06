@@ -19,6 +19,9 @@ var DefaultConfig = Config{
 	MaxPerPage:     100,
 }
 
+// Normalize applies sane defaults when Page or PerPage are out of range.
+// Out-of-range values are silently replaced with defaults — callers should
+// not rely on specific values being preserved.
 func (p *Page) Normalize(cfg Config) {
 	if p.Page < 1 {
 		p.Page = cfg.DefaultPage

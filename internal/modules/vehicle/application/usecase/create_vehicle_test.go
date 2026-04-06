@@ -15,11 +15,13 @@ import (
 	mockvehicle "torque/mocks/vehicle/domain"
 )
 
-var validInput = vehicledto.CreateVehicleInput{
-	ModelYearID: uuid.New(),
-	VIN:         "1HGBH41JXMN109186",
-	Plate:       "ABC1234",
-	Color:       "#FF0000",
+func validInput() vehicledto.CreateVehicleInput {
+	return vehicledto.CreateVehicleInput{
+		ModelYearID: uuid.New(),
+		VIN:         "1HGBH41JXMN109186",
+		Plate:       "ABC1234",
+		Color:       "#FF0000",
+	}
 }
 
 func TestCreateVehicle_Execute(t *testing.T) {
@@ -29,31 +31,33 @@ func TestCreateVehicle_Execute(t *testing.T) {
 		repo := mockvehicle.NewMockRepository(t)
 		modelRepo := mockvehicle.NewMockModelRepository(t)
 		ctx := authCtx()
+		in := validInput()
 
-		modelRepo.EXPECT().GetModelYearByID(ctx, vehicledomain.VehicleModelYearID(validInput.ModelYearID)).Return(modelYear, nil)
-		repo.EXPECT().GetByVIN(ctx, vehicledomain.VIN(validInput.VIN)).Return(nil, nil)
-		repo.EXPECT().GetByPlate(ctx, vehicledomain.Plate(validInput.Plate)).Return(nil, nil)
+		modelRepo.EXPECT().GetModelYearByID(ctx, vehicledomain.VehicleModelYearID(in.ModelYearID)).Return(modelYear, nil)
+		repo.EXPECT().GetByVIN(ctx, vehicledomain.VIN(in.VIN)).Return(nil, nil)
+		repo.EXPECT().GetByPlate(ctx, vehicledomain.Plate(in.Plate)).Return(nil, nil)
 		repo.EXPECT().Save(ctx, mock.MatchedBy(func(v *vehicledomain.Vehicle) bool {
-			return v.VIN == vehicledomain.VIN(validInput.VIN) && v.Plate == vehicledomain.Plate(validInput.Plate)
+			return v.VIN == vehicledomain.VIN(in.VIN) && v.Plate == vehicledomain.Plate(in.Plate)
 		})).Return(nil)
 
 		uc := vehicleusecase.NewCreateVehicle(repo, modelRepo, newValidate())
-		out, err := uc.Execute(ctx, validInput)
+		out, err := uc.Execute(ctx, in)
 
 		require.NoError(t, err)
-		assert.Equal(t, validInput.VIN, out.VIN)
-		assert.Equal(t, validInput.Plate, out.Plate)
+		assert.Equal(t, in.VIN, out.VIN)
+		assert.Equal(t, in.Plate, out.Plate)
 	})
 
 	t.Run("returns not found when model year does not exist", func(t *testing.T) {
 		repo := mockvehicle.NewMockRepository(t)
 		modelRepo := mockvehicle.NewMockModelRepository(t)
 		ctx := authCtx()
+		in := validInput()
 
-		modelRepo.EXPECT().GetModelYearByID(ctx, vehicledomain.VehicleModelYearID(validInput.ModelYearID)).Return(nil, nil)
+		modelRepo.EXPECT().GetModelYearByID(ctx, vehicledomain.VehicleModelYearID(in.ModelYearID)).Return(nil, nil)
 
 		uc := vehicleusecase.NewCreateVehicle(repo, modelRepo, newValidate())
-		_, err := uc.Execute(ctx, validInput)
+		_, err := uc.Execute(ctx, in)
 
 		require.Error(t, err)
 		var appErr *apperr.Error
@@ -65,12 +69,13 @@ func TestCreateVehicle_Execute(t *testing.T) {
 		repo := mockvehicle.NewMockRepository(t)
 		modelRepo := mockvehicle.NewMockModelRepository(t)
 		ctx := authCtx()
+		in := validInput()
 
-		modelRepo.EXPECT().GetModelYearByID(ctx, vehicledomain.VehicleModelYearID(validInput.ModelYearID)).Return(modelYear, nil)
-		repo.EXPECT().GetByVIN(ctx, vehicledomain.VIN(validInput.VIN)).Return(&vehicledomain.Vehicle{VIN: vehicledomain.VIN(validInput.VIN)}, nil)
+		modelRepo.EXPECT().GetModelYearByID(ctx, vehicledomain.VehicleModelYearID(in.ModelYearID)).Return(modelYear, nil)
+		repo.EXPECT().GetByVIN(ctx, vehicledomain.VIN(in.VIN)).Return(&vehicledomain.Vehicle{VIN: vehicledomain.VIN(in.VIN)}, nil)
 
 		uc := vehicleusecase.NewCreateVehicle(repo, modelRepo, newValidate())
-		_, err := uc.Execute(ctx, validInput)
+		_, err := uc.Execute(ctx, in)
 
 		require.Error(t, err)
 		var appErr *apperr.Error
@@ -82,13 +87,14 @@ func TestCreateVehicle_Execute(t *testing.T) {
 		repo := mockvehicle.NewMockRepository(t)
 		modelRepo := mockvehicle.NewMockModelRepository(t)
 		ctx := authCtx()
+		in := validInput()
 
-		modelRepo.EXPECT().GetModelYearByID(ctx, vehicledomain.VehicleModelYearID(validInput.ModelYearID)).Return(modelYear, nil)
-		repo.EXPECT().GetByVIN(ctx, vehicledomain.VIN(validInput.VIN)).Return(nil, nil)
-		repo.EXPECT().GetByPlate(ctx, vehicledomain.Plate(validInput.Plate)).Return(&vehicledomain.Vehicle{Plate: vehicledomain.Plate(validInput.Plate)}, nil)
+		modelRepo.EXPECT().GetModelYearByID(ctx, vehicledomain.VehicleModelYearID(in.ModelYearID)).Return(modelYear, nil)
+		repo.EXPECT().GetByVIN(ctx, vehicledomain.VIN(in.VIN)).Return(nil, nil)
+		repo.EXPECT().GetByPlate(ctx, vehicledomain.Plate(in.Plate)).Return(&vehicledomain.Vehicle{Plate: vehicledomain.Plate(in.Plate)}, nil)
 
 		uc := vehicleusecase.NewCreateVehicle(repo, modelRepo, newValidate())
-		_, err := uc.Execute(ctx, validInput)
+		_, err := uc.Execute(ctx, in)
 
 		require.Error(t, err)
 		var appErr *apperr.Error
@@ -113,5 +119,62 @@ func TestCreateVehicle_Execute(t *testing.T) {
 		var appErr *apperr.Error
 		require.True(t, errors.As(err, &appErr))
 		assert.Equal(t, apperr.KindValidation, appErr.Kind)
+	})
+
+	t.Run("returns internal error when GetByVIN fails", func(t *testing.T) {
+		repo := mockvehicle.NewMockRepository(t)
+		modelRepo := mockvehicle.NewMockModelRepository(t)
+		ctx := authCtx()
+		in := validInput()
+
+		modelRepo.EXPECT().GetModelYearByID(ctx, vehicledomain.VehicleModelYearID(in.ModelYearID)).Return(modelYear, nil)
+		repo.EXPECT().GetByVIN(ctx, vehicledomain.VIN(in.VIN)).Return(nil, assert.AnError)
+
+		uc := vehicleusecase.NewCreateVehicle(repo, modelRepo, newValidate())
+		_, err := uc.Execute(ctx, in)
+
+		require.Error(t, err)
+		var appErr *apperr.Error
+		require.True(t, errors.As(err, &appErr))
+		assert.Equal(t, apperr.KindInternal, appErr.Kind)
+	})
+
+	t.Run("returns internal error when GetByPlate fails", func(t *testing.T) {
+		repo := mockvehicle.NewMockRepository(t)
+		modelRepo := mockvehicle.NewMockModelRepository(t)
+		ctx := authCtx()
+		in := validInput()
+
+		modelRepo.EXPECT().GetModelYearByID(ctx, vehicledomain.VehicleModelYearID(in.ModelYearID)).Return(modelYear, nil)
+		repo.EXPECT().GetByVIN(ctx, vehicledomain.VIN(in.VIN)).Return(nil, nil)
+		repo.EXPECT().GetByPlate(ctx, vehicledomain.Plate(in.Plate)).Return(nil, assert.AnError)
+
+		uc := vehicleusecase.NewCreateVehicle(repo, modelRepo, newValidate())
+		_, err := uc.Execute(ctx, in)
+
+		require.Error(t, err)
+		var appErr *apperr.Error
+		require.True(t, errors.As(err, &appErr))
+		assert.Equal(t, apperr.KindInternal, appErr.Kind)
+	})
+
+	t.Run("returns internal error when Save fails", func(t *testing.T) {
+		repo := mockvehicle.NewMockRepository(t)
+		modelRepo := mockvehicle.NewMockModelRepository(t)
+		ctx := authCtx()
+		in := validInput()
+
+		modelRepo.EXPECT().GetModelYearByID(ctx, vehicledomain.VehicleModelYearID(in.ModelYearID)).Return(modelYear, nil)
+		repo.EXPECT().GetByVIN(ctx, vehicledomain.VIN(in.VIN)).Return(nil, nil)
+		repo.EXPECT().GetByPlate(ctx, vehicledomain.Plate(in.Plate)).Return(nil, nil)
+		repo.EXPECT().Save(ctx, mock.Anything).Return(assert.AnError)
+
+		uc := vehicleusecase.NewCreateVehicle(repo, modelRepo, newValidate())
+		_, err := uc.Execute(ctx, in)
+
+		require.Error(t, err)
+		var appErr *apperr.Error
+		require.True(t, errors.As(err, &appErr))
+		assert.Equal(t, apperr.KindInternal, appErr.Kind)
 	})
 }

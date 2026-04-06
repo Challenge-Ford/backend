@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 	"torque/internal/core/db"
 	"torque/internal/core/id"
 )
@@ -69,6 +68,6 @@ func (Device) TableName() string {
 
 func (d *Device) Delete(byUser uuid.UUID) {
 	now := time.Now()
-	d.DeletedAt = gorm.DeletedAt{Time: now, Valid: true}
+	d.DeletedAt = db.SoftDeletedAt{Time: now, Valid: true}
 	d.DeletedBy = &byUser
 }

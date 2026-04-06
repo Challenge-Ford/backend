@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"torque/cmd/api/httperr"
+	"torque/internal/core/apperr"
 	telemetrydto "torque/internal/modules/telemetry/application/dto"
 )
 
@@ -32,7 +33,7 @@ func NewTelemetryHandler(listTelemetry telemetryLister, listDTCs dtcLister) *Tel
 func (h *TelemetryHandler) ListTelemetry(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		httperr.Write(w, err)
+		httperr.Write(w, apperr.BadRequest("invalid vehicle id"))
 		return
 	}
 
@@ -56,7 +57,7 @@ func (h *TelemetryHandler) ListTelemetry(w http.ResponseWriter, r *http.Request)
 			httperr.Write(w, err)
 			return
 		}
-		after = &t
+		after = t
 	}
 
 	limit, _ := strconv.Atoi(q.Get("limit"))
@@ -79,7 +80,7 @@ func (h *TelemetryHandler) ListTelemetry(w http.ResponseWriter, r *http.Request)
 func (h *TelemetryHandler) ListDTCs(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		httperr.Write(w, err)
+		httperr.Write(w, apperr.BadRequest("invalid vehicle id"))
 		return
 	}
 
@@ -92,9 +93,13 @@ func (h *TelemetryHandler) ListDTCs(w http.ResponseWriter, r *http.Request) {
 	httperr.JSON(w, http.StatusOK, result)
 }
 
-func parseTime(s string) (time.Time, error) {
+func parseTime(s string) (*time.Time, error) {
 	if s == "" {
-		return time.Time{}, nil
+		return nil, nil
 	}
-	return time.Parse(time.RFC3339, s)
+	t, err := time.Parse(time.RFC3339, s)
+	if err != nil {
+		return nil, err
+	}
+	return &t, nil
 }
