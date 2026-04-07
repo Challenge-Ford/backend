@@ -1,4 +1,4 @@
--- +migrate Down
+
 DROP TABLE IF EXISTS device.devices;
 DROP TABLE IF EXISTS vehicle.vehicles;
 DROP TABLE IF EXISTS vehicle.vehicle_model_year_colors;

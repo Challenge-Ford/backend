@@ -84,56 +84,10 @@ until $COMPOSE exec -T postgres pg_isready -U torque > /dev/null 2>&1; do
   sleep 2
 done
 
-MIGRATE_IMG="migrate/migrate:v4.18.2"
-MIGRATIONS_DIR_HOST="$MIGRATIONS_DIR"
-MAIN_DB="postgres://torque:torque@postgres:5432/torque?sslmode=disable"
-TS_DB="postgres://torque:torque@timescaledb:5432/torque?sslmode=disable"
+MIGRATE="migrate -path $MIGRATIONS_DIR/main -database postgres://torque:torque@localhost:5432/torque?sslmode=disable"
 
-run_migrations() {
-  local DB_URL="$1"
-  local DB_LABEL="$2"
-  local MIGRATION_DIR="$3"
-
-  echo "  running $DB_LABEL migrations"
-
-  OUTPUT=$(docker run --rm \
-    --network torque \
-    -v "$MIGRATION_DIR:/migrations" \
-    "$MIGRATE_IMG" \
-    -path /migrations \
-    -database "$DB_URL" \
-    up 2>&1) || true
-
-  if echo "$OUTPUT" | grep -qi "dirty"; then
-    VERSION=$(echo "$OUTPUT" | grep -oP 'version \K[0-9]+')
-    if [ -n "$VERSION" ]; then
-      echo "  dirty database detected (version $VERSION), forcing clean state"
-      docker run --rm \
-        --network torque \
-        -v "$MIGRATION_DIR:/migrations" \
-        "$MIGRATE_IMG" \
-        -path /migrations \
-        -database "$DB_URL" \
-        force "$VERSION" > /dev/null 2>&1
-      OUTPUT=$(docker run --rm \
-        --network torque \
-        -v "$MIGRATION_DIR:/migrations" \
-        "$MIGRATE_IMG" \
-        -path /migrations \
-        -database "$DB_URL" \
-        up 2>&1) || true
-    fi
-  fi
-
-  if echo "$OUTPUT" | grep -q "no change"; then
-    echo "  $DB_LABEL — already up to date"
-  else
-    echo "$OUTPUT" | while IFS= read -r line; do echo "  $line"; done
-  fi
-  echo "  ✓ $DB_LABEL migrations complete"
-}
-
-run_migrations "$MAIN_DB" "main database" "$MIGRATIONS_DIR/main"
+$MIGRATE up 2>&1 | while IFS= read -r line; do echo "  $line"; done
+echo "  ✓ main database migrations complete"
 
 # Timescale migrations (separate database)
 until $COMPOSE exec -T timescaledb pg_isready -U torque > /dev/null 2>&1; do
@@ -141,7 +95,10 @@ until $COMPOSE exec -T timescaledb pg_isready -U torque > /dev/null 2>&1; do
   sleep 2
 done
 
-run_migrations "$TS_DB" "timescaledb" "$MIGRATIONS_DIR/timescale"
+MIGRATE_TS="migrate -path $MIGRATIONS_DIR/timescale -database postgres://torque:torque@localhost:5433/torque?sslmode=disable"
+
+$MIGRATE_TS up 2>&1 | while IFS= read -r line; do echo "  $line"; done
+echo "  ✓ timescaledb migrations complete"
 
 # ──────────────────────────────────────────────────────────────
 print_step "3/7  Waiting for step-ca to become healthy"

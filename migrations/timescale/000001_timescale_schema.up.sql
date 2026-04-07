@@ -1,4 +1,4 @@
--- +migrate Up
+
 CREATE TABLE IF NOT EXISTS telemetry_entries (
     time            TIMESTAMPTZ      NOT NULL,
     device_id       UUID             NOT NULL,

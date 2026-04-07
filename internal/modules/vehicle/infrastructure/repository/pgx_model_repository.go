@@ -20,7 +20,7 @@ func NewModelRepository(pool *pgxpool.Pool) *ModelRepository {
 func (r *ModelRepository) GetModelByID(ctx context.Context, id vehicledomain.VehicleModelID) (*vehicledomain.VehicleModel, error) {
 	row := r.pool.QueryRow(ctx, `
 		SELECT id, name, type
-		FROM vehicle.vehicle_models
+		FROM catalog.vehicle_models
 		WHERE id = $1
 	`, id)
 
@@ -38,7 +38,7 @@ func (r *ModelRepository) GetModelByID(ctx context.Context, id vehicledomain.Veh
 func (r *ModelRepository) ListModels(ctx context.Context) ([]*vehicledomain.VehicleModel, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT id, name, type
-		FROM vehicle.vehicle_models
+		FROM catalog.vehicle_models
 		ORDER BY name ASC
 	`)
 	if err != nil {
@@ -61,8 +61,8 @@ func (r *ModelRepository) GetModelYearByID(ctx context.Context, id vehicledomain
 	row := r.pool.QueryRow(ctx, `
 		SELECT vmy.id, vmy.model_id, vmy.year, vmy.model_url,
 		       vm.id, vm.name, vm.type
-		FROM vehicle.vehicle_model_years vmy
-		LEFT JOIN vehicle.vehicle_models vm ON vm.id = vmy.model_id
+		FROM catalog.vehicle_model_years vmy
+		LEFT JOIN catalog.vehicle_models vm ON vm.id = vmy.model_id
 		WHERE vmy.id = $1
 	`, id)
 
@@ -88,7 +88,7 @@ func (r *ModelRepository) ListModelYears(ctx context.Context, modelID vehicledom
 	// First get the years
 	rows, err := r.pool.Query(ctx, `
 		SELECT id, model_id, year, model_url
-		FROM vehicle.vehicle_model_years
+		FROM catalog.vehicle_model_years
 		WHERE model_id = $1
 		ORDER BY year ASC
 	`, modelID)
@@ -124,7 +124,7 @@ func (r *ModelRepository) ListModelYears(ctx context.Context, modelID vehicledom
 
 	colorRows, err := r.pool.Query(ctx, `
 		SELECT id, model_year_id, name, hex
-		FROM vehicle.vehicle_model_year_colors
+		FROM catalog.vehicle_model_year_colors
 		WHERE model_year_id = ANY($1::uuid[])
 	`, ids)
 	if err != nil {

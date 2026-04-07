@@ -2,12 +2,12 @@
 -- Safe to run multiple times (idempotent via ON CONFLICT DO NOTHING)
 
 -- Ford Ranger Raptor
-INSERT INTO vehicle.vehicle_models (id, name, type)
+INSERT INTO catalog.vehicle_models (id, name, type)
 VALUES ('1a1a1a1a-1a1a-1a1a-1a1a-1a1a1a1a1a1a', 'Ranger Raptor', 'pickup')
 ON CONFLICT (name) DO NOTHING;
 
 -- 2019–2022 Ranger Raptor (same 3D model)
-INSERT INTO vehicle.vehicle_model_years (id, model_id, year, model_url) VALUES
+INSERT INTO catalog.vehicle_model_years (id, model_id, year, model_url) VALUES
   ('1a1a1a1a-1a1a-1a1a-1a1a-1a1a1a1a1a19', '1a1a1a1a-1a1a-1a1a-1a1a-1a1a1a1a1a1a', 2019, 'http://localhost:9000/vehicle-models/ranger_raptor.glb'),
   ('1a1a1a1a-1a1a-1a1a-1a1a-1a1a1a1a1a20', '1a1a1a1a-1a1a-1a1a-1a1a-1a1a1a1a1a1a', 2020, 'http://localhost:9000/vehicle-models/ranger_raptor.glb'),
   ('1a1a1a1a-1a1a-1a1a-1a1a-1a1a1a1a1a21', '1a1a1a1a-1a1a-1a1a-1a1a-1a1a1a1a1a1a', 2021, 'http://localhost:9000/vehicle-models/ranger_raptor.glb'),
@@ -15,12 +15,12 @@ INSERT INTO vehicle.vehicle_model_years (id, model_id, year, model_url) VALUES
 ON CONFLICT (model_id, year) DO NOTHING;
 
 -- 2024 Ranger Raptor
-INSERT INTO vehicle.vehicle_model_years (id, model_id, year, model_url)
+INSERT INTO catalog.vehicle_model_years (id, model_id, year, model_url)
 VALUES ('1a1a1a1a-1a1a-1a1a-1a1a-1a1a1a1a1a24', '1a1a1a1a-1a1a-1a1a-1a1a-1a1a1a1a1a1a', 2024, 'http://localhost:9000/vehicle-models/ranger_raptor.glb')
 ON CONFLICT (model_id, year) DO NOTHING;
 
 -- 2019–2022 colors
-INSERT INTO vehicle.vehicle_model_year_colors (id, model_year_id, name, hex) VALUES
+INSERT INTO catalog.vehicle_model_year_colors (id, model_year_id, name, hex) VALUES
   ('00000000-0019-0000-0001-000000000001', '1a1a1a1a-1a1a-1a1a-1a1a-1a1a1a1a1a19', 'Azul Belize', '#003A8F'),
   ('00000000-0019-0000-0001-000000000002', '1a1a1a1a-1a1a-1a1a-1a1a-1a1a1a1a1a19', 'Laranja Saara', '#D94F00'),
   ('00000000-0019-0000-0001-000000000003', '1a1a1a1a-1a1a-1a1a-1a1a-1a1a1a1a1a19', 'Preto Astúrias', '#0B0B0B'),
@@ -44,11 +44,11 @@ INSERT INTO vehicle.vehicle_model_year_colors (id, model_year_id, name, hex) VAL
 ON CONFLICT (id) DO NOTHING;
 
 -- 2024 Ranger Raptor (different colors)
-INSERT INTO vehicle.vehicle_model_years (id, model_id, year, model_url)
+INSERT INTO catalog.vehicle_model_years (id, model_id, year, model_url)
 VALUES ('1a1a1a1a-1a1a-1a1a-1a1a-1a1a1a1a1a24', '1a1a1a1a-1a1a-1a1a-1a1a-1a1a1a1a1a1a', 2024, 'http://localhost:9000/vehicle-models/ranger_raptor.glb')
 ON CONFLICT (model_id, year) DO NOTHING;
 
-INSERT INTO vehicle.vehicle_model_year_colors (id, model_year_id, name, hex) VALUES
+INSERT INTO catalog.vehicle_model_year_colors (id, model_year_id, name, hex) VALUES
   ('00000000-0024-0000-0001-000000000001', '1a1a1a1a-1a1a-1a1a-1a1a-1a1a1a1a1a24', 'Azul Belize', '#003A8F'),
   ('00000000-0024-0000-0001-000000000002', '1a1a1a1a-1a1a-1a1a-1a1a-1a1a1a1a1a24', 'Laranja Saara (Code Orange)', '#FF5A1F'),
   ('00000000-0024-0000-0001-000000000003', '1a1a1a1a-1a1a-1a1a-1a1a-1a1a1a1a1a24', 'Preto Astúria', '#0B0B0B'),
@@ -57,18 +57,18 @@ INSERT INTO vehicle.vehicle_model_year_colors (id, model_year_id, name, hex) VAL
 ON CONFLICT (id) DO NOTHING;
 
 -- Ford Territory
-INSERT INTO vehicle.vehicle_models (id, name, type)
+INSERT INTO catalog.vehicle_models (id, name, type)
 VALUES ('2a2a2a2a-2a2a-2a2a-2a2a-2a2a2a2a2a2a', 'Territory', 'suv')
 ON CONFLICT (name) DO NOTHING;
 
 -- 2020–2022 Territory
-INSERT INTO vehicle.vehicle_model_years (id, model_id, year, model_url) VALUES
+INSERT INTO catalog.vehicle_model_years (id, model_id, year, model_url) VALUES
   ('2a2a2a2a-2a2a-2a2a-2a2a-2a2a2a2a2a20', '2a2a2a2a-2a2a-2a2a-2a2a-2a2a2a2a2a2a', 2020, 'http://localhost:9000/vehicle-models/generic_suv.glb'),
   ('2a2a2a2a-2a2a-2a2a-2a2a-2a2a2a2a2a21', '2a2a2a2a-2a2a-2a2a-2a2a-2a2a2a2a2a2a', 2021, 'http://localhost:9000/vehicle-models/generic_suv.glb'),
   ('2a2a2a2a-2a2a-2a2a-2a2a-2a2a2a2a2a22', '2a2a2a2a-2a2a-2a2a-2a2a-2a2a2a2a2a2a', 2022, 'http://localhost:9000/vehicle-models/generic_suv.glb')
 ON CONFLICT (model_id, year) DO NOTHING;
 
-INSERT INTO vehicle.vehicle_model_year_colors (id, model_year_id, name, hex) VALUES
+INSERT INTO catalog.vehicle_model_year_colors (id, model_year_id, name, hex) VALUES
   ('00000000-0020-0000-0002-000000000001', '2a2a2a2a-2a2a-2a2a-2a2a-2a2a2a2a2a20', 'Azul Santorini', '#1F3F8C'),
   ('00000000-0020-0000-0002-000000000002', '2a2a2a2a-2a2a-2a2a-2a2a-2a2a2a2a2a20', 'Branco Bariloche', '#F5F5F5'),
   ('00000000-0020-0000-0002-000000000003', '2a2a2a2a-2a2a-2a2a-2a2a-2a2a2a2a2a20', 'Prata Maiorca', '#A6A9AD'),
@@ -87,12 +87,12 @@ INSERT INTO vehicle.vehicle_model_year_colors (id, model_year_id, name, hex) VAL
 ON CONFLICT (id) DO NOTHING;
 
 -- 2023–2024 Territory
-INSERT INTO vehicle.vehicle_model_years (id, model_id, year, model_url) VALUES
+INSERT INTO catalog.vehicle_model_years (id, model_id, year, model_url) VALUES
   ('2a2a2a2a-2a2a-2a2a-2a2a-2a2a2a2a2a23', '2a2a2a2a-2a2a-2a2a-2a2a-2a2a2a2a2a2a', 2023, 'http://localhost:9000/vehicle-models/generic_suv.glb'),
   ('2a2a2a2a-2a2a-2a2a-2a2a-2a2a2a2a2a24', '2a2a2a2a-2a2a-2a2a-2a2a-2a2a2a2a2a2a', 2024, 'http://localhost:9000/vehicle-models/generic_suv.glb')
 ON CONFLICT (model_id, year) DO NOTHING;
 
-INSERT INTO vehicle.vehicle_model_year_colors (id, model_year_id, name, hex) VALUES
+INSERT INTO catalog.vehicle_model_year_colors (id, model_year_id, name, hex) VALUES
   ('00000000-0023-0000-0002-000000000001', '2a2a2a2a-2a2a-2a2a-2a2a-2a2a2a2a2a23', 'Azul Profundo', '#1A2F6C'),
   ('00000000-0023-0000-0002-000000000002', '2a2a2a2a-2a2a-2a2a-2a2a-2a2a2a2a2a23', 'Cinza Catar', '#7A7F85'),
   ('00000000-0023-0000-0002-000000000003', '2a2a2a2a-2a2a-2a2a-2a2a-2a2a2a2a2a23', 'Cinza Dover', '#5C6064'),

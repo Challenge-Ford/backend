@@ -49,8 +49,8 @@ func (r *Repository) GetByID(ctx context.Context, id vehicledomain.VehicleID) (*
 		       vmy.id, vmy.model_id, vmy.year, vmy.model_url,
 		       vm.id, vm.name, vm.type
 		FROM vehicle.vehicles v
-		LEFT JOIN vehicle.vehicle_model_years vmy ON vmy.id = v.model_year_id
-		LEFT JOIN vehicle.vehicle_models vm ON vm.id = vmy.model_id
+		LEFT JOIN catalog.vehicle_model_years vmy ON vmy.id = v.model_year_id
+		LEFT JOIN catalog.vehicle_models vm ON vm.id = vmy.model_id
 		WHERE v.id = $1 AND v.deleted_at IS NULL
 	`, id)
 
@@ -102,8 +102,8 @@ func (r *Repository) List(ctx context.Context, page pagination.Page) ([]*vehicle
 		       vmy.id, vmy.model_id, vmy.year, vmy.model_url,
 		       vm.id, vm.name, vm.type
 		FROM vehicle.vehicles v
-		LEFT JOIN vehicle.vehicle_model_years vmy ON vmy.id = v.model_year_id
-		LEFT JOIN vehicle.vehicle_models vm ON vm.id = vmy.model_id
+		LEFT JOIN catalog.vehicle_model_years vmy ON vmy.id = v.model_year_id
+		LEFT JOIN catalog.vehicle_models vm ON vm.id = vmy.model_id
 		WHERE v.deleted_at IS NULL
 		ORDER BY v.created_at DESC
 		OFFSET $1 LIMIT $2

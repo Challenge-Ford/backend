@@ -1,4 +1,4 @@
--- +migrate Up
+
 CREATE SCHEMA IF NOT EXISTS vehicle;
 CREATE SCHEMA IF NOT EXISTS device;
 

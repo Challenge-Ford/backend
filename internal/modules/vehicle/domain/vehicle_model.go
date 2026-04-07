@@ -50,5 +50,5 @@ type VehicleModel struct {
 }
 
 func (VehicleModel) TableName() string {
-	return "vehicle.vehicle_models"
+	return "catalog.vehicle_models"
 }

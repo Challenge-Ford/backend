@@ -180,6 +180,8 @@ services:
       DOCKER_STEPCA_INIT_PROVISIONER_NAME: "torque"
       DOCKER_STEPCA_INIT_PASSWORD_FILE: /run/secrets/ca-password
       DOCKER_STEPCA_INIT_PROVISIONER_PASSWORD_FILE: /run/secrets/ca-password
+    ports:
+      - "9002:9000"
     volumes:
       - step-ca-data:/home/step
       - ./step-ca/password.txt:/run/secrets/ca-password:ro

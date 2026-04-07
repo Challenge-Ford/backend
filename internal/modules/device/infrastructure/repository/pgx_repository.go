@@ -39,8 +39,8 @@ func (r *Repository) List(ctx context.Context, page pagination.Page) ([]*deviced
 		       vmy.model_url AS vehicle_model_url
 		FROM device.devices d
 		LEFT JOIN vehicle.vehicles v ON v.id = d.vehicle_id AND v.deleted_at IS NULL
-		LEFT JOIN vehicle.vehicle_model_years vmy ON vmy.id = v.model_year_id
-		LEFT JOIN vehicle.vehicle_models vm ON vm.id = vmy.model_id
+		LEFT JOIN catalog.vehicle_model_years vmy ON vmy.id = v.model_year_id
+		LEFT JOIN catalog.vehicle_models vm ON vm.id = vmy.model_id
 		WHERE d.deleted_at IS NULL
 		ORDER BY d.created_at DESC
 		OFFSET $1 LIMIT $2

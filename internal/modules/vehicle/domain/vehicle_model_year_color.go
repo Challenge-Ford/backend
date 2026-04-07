@@ -51,5 +51,5 @@ type VehicleModelYearColor struct {
 }
 
 func (VehicleModelYearColor) TableName() string {
-	return "vehicle.vehicle_model_year_colors"
+	return "catalog.vehicle_model_year_colors"
 }
