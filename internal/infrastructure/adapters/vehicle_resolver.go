@@ -37,6 +37,21 @@ func (a *VehicleResolverAdapter) GetVINByID(ctx context.Context, vehicleID uuid.
 	return out.VIN, nil
 }
 
+func (a *VehicleResolverAdapter) GetModelYearIDByVehicleID(ctx context.Context, vehicleID uuid.UUID) (uuid.UUID, error) {
+	out, err := a.findVehicle.Execute(ctx, vehicledomain.VehicleID(vehicleID))
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("vehicle resolver: %w", err)
+	}
+	if out == nil || out.ModelYearID == "" {
+		return uuid.Nil, nil
+	}
+	parsed, err := uuid.Parse(out.ModelYearID)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("vehicle resolver: parse model_year_id: %w", err)
+	}
+	return parsed, nil
+}
+
 func (a *VehicleResolverAdapter) Exists(ctx context.Context, vehicleID uuid.UUID) (bool, error) {
 	exists, err := a.existsVehicle.Execute(ctx, vehicledomain.VehicleID(vehicleID))
 	if err != nil {

@@ -81,8 +81,16 @@ type TelemetrySummaryOutput struct {
 }
 
 type DTCOutput struct {
-	Code   string    `json:"code"`
-	Time   time.Time `json:"time"`
+	Code         string    `json:"code"`
+	Time         time.Time `json:"time"`
+	Description  string    `json:"description,omitempty"`
+	System       *string   `json:"system,omitempty"`
+	Severity     string    `json:"severity"`
+	RequiresStop bool      `json:"requiresStop"`
+	CostMinCents *int      `json:"costMinCents,omitempty"`
+	CostMaxCents *int      `json:"costMaxCents,omitempty"`
+	TimeMin      *int      `json:"timeMin,omitempty"`
+	TimeMax      *int      `json:"timeMax,omitempty"`
 }
 
 type DTCListOutput struct {

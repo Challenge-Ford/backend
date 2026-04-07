@@ -3,6 +3,8 @@ package telemetrydomain
 import (
 	"context"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // Repository is the driven port for persisting telemetry entries.
@@ -18,4 +20,9 @@ type DTCRepository interface {
 	Insert(ctx context.Context, entry *DTCEntry) error
 	ListActive(ctx context.Context, vin string) ([]*DTCEntry, error)
 	HasActiveDTCs(ctx context.Context, vins []string) (map[string]bool, error)
+}
+
+// DTCCatalogRepository is the driven port for reading diagnostic trouble code reference data.
+type DTCCatalogRepository interface {
+	GetWithEstimates(ctx context.Context, code string, modelYearID uuid.UUID) (*DTCCatalogWithEstimates, error)
 }

@@ -19,6 +19,7 @@ packages:
     interfaces:
       Repository:
       DTCRepository:
+      DTCCatalogRepository:
       DeviceResolver:
       VehicleResolver:
   torque/internal/modules/vehicle/domain:

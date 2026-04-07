@@ -40,6 +40,24 @@ type DTCEntry struct {
 	Status   string // "opened" or "closed"
 }
 
+// DTCCatalog is a reference table with standard OBD-II diagnostic trouble codes.
+type DTCCatalog struct {
+	Code         string
+	Description  string
+	System       *string
+	Severity     string
+	RequiresStop bool
+}
+
+// DTCCatalogWithEstimates extends DTCCatalog with vehicle-specific cost/time estimates.
+type DTCCatalogWithEstimates struct {
+	DTCCatalog
+	CostMinCents *int
+	CostMaxCents *int
+	TimeMin      *int
+	TimeMax      *int
+}
+
 type TelemetrySummary struct {
 	Bucket            time.Time
 	AvgRPM            *float64

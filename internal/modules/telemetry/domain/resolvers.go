@@ -17,8 +17,9 @@ type ResolvedDevice struct {
 	VIN string
 }
 
-// VehicleResolver resolves a vehicle's VIN by its ID.
+// VehicleResolver resolves a vehicle's VIN and model year by its ID.
 // Implemented outside this module to keep telemetry isolated.
 type VehicleResolver interface {
 	GetVINByID(ctx context.Context, vehicleID uuid.UUID) (string, error)
+	GetModelYearIDByVehicleID(ctx context.Context, vehicleID uuid.UUID) (uuid.UUID, error)
 }

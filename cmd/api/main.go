@@ -74,6 +74,7 @@ func main() {
 	deviceRepo := devicerepository.NewRepository(pool)
 	telemetryRepo := telemetryrepository.NewPgxRepository(tsPool)
 	dtcRepo := telemetryrepository.NewPgxDTCRepository(tsPool)
+	dtcCatalogRepo := telemetryrepository.NewPgxDTCatalogRepository(pool)
 
 	validate := validator.New()
 	validate.RegisterValidation("vin", func(fl validator.FieldLevel) bool {
@@ -105,7 +106,7 @@ func main() {
 
 	telemetry := handler.NewTelemetryHandler(
 		telemetryusecase.NewListTelemetry(telemetryRepo, vehicleResolver),
-		telemetryusecase.NewListActiveDTCs(dtcRepo, vehicleResolver),
+		telemetryusecase.NewListActiveDTCs(dtcRepo, dtcCatalogRepo, vehicleResolver),
 	)
 
 	vehicles := handler.NewVehicleHandler(
