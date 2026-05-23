@@ -1,0 +1,786 @@
+openapi: 3.0.3
+info:
+  title: Torque API
+  version: 0.1.0
+  description: HTTP API for vehicle, device, telemetry and DTC operations.
+servers:
+  - url: http://localhost:8080
+    description: Local API
+security:
+  - UserIdHeader: []
+tags:
+  - name: Health
+  - name: Devices
+  - name: Vehicles
+  - name: Vehicle Models
+  - name: Telemetry
+paths:
+  /healthz:
+    get:
+      tags: [Health]
+      summary: Liveness check
+      responses:
+        "200":
+          description: API process is alive.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /readyz:
+    get:
+      tags: [Health]
+      summary: Readiness check
+      responses:
+        "200":
+          description: Database connections are healthy.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+        "503":
+          description: A required dependency is unhealthy.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DependencyHealthError"
+  /devices:
+    get:
+      tags: [Devices]
+      summary: List devices
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: Paginated devices.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeviceListResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      tags: [Devices]
+      summary: Create a device
+      description: Creates a device and returns the issued certificate and private key.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDeviceInput"
+      responses:
+        "201":
+          description: Device created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateDeviceOutput"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /devices/{id}/commission:
+    post:
+      tags: [Devices]
+      summary: Commission a device to a vehicle
+      parameters:
+        - $ref: "#/components/parameters/DeviceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommissionDeviceInput"
+      responses:
+        "200":
+          description: Device commissioned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Device"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /devices/{id}/decommission:
+    post:
+      tags: [Devices]
+      summary: Decommission a device
+      parameters:
+        - $ref: "#/components/parameters/DeviceId"
+      responses:
+        "200":
+          description: Device decommissioned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Device"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /vehicles:
+    get:
+      tags: [Vehicles]
+      summary: List vehicles
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: Paginated vehicles.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VehicleListResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      tags: [Vehicles]
+      summary: Create a vehicle
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateVehicleInput"
+      responses:
+        "201":
+          description: Vehicle created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Vehicle"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /vehicles/{id}:
+    get:
+      tags: [Vehicles]
+      summary: Get a vehicle
+      parameters:
+        - $ref: "#/components/parameters/VehicleId"
+      responses:
+        "200":
+          description: Vehicle found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Vehicle"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Vehicles]
+      summary: Update a vehicle
+      parameters:
+        - $ref: "#/components/parameters/VehicleId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateVehicleInput"
+      responses:
+        "200":
+          description: Vehicle updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Vehicle"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Vehicles]
+      summary: Delete a vehicle
+      parameters:
+        - $ref: "#/components/parameters/VehicleId"
+      responses:
+        "204":
+          description: Vehicle deleted.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /vehicles/{id}/telemetry:
+    get:
+      tags: [Telemetry]
+      summary: List vehicle telemetry
+      description: Returns OBD-II telemetry fields. GPS fields are stored internally but not returned by this endpoint.
+      parameters:
+        - $ref: "#/components/parameters/VehicleId"
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: after
+          in: query
+          required: false
+          description: Cursor returned as `next` by a previous response.
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 100
+      responses:
+        "200":
+          description: Telemetry entries.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TelemetryList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /vehicles/{id}/dtcs:
+    get:
+      tags: [Telemetry]
+      summary: List active DTCs for a vehicle
+      parameters:
+        - $ref: "#/components/parameters/VehicleId"
+      responses:
+        "200":
+          description: Active DTCs.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DTCList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /vehicle-models:
+    get:
+      tags: [Vehicle Models]
+      summary: List vehicle models
+      responses:
+        "200":
+          description: Vehicle models.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VehicleModelListResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /vehicle-models/{id}/years:
+    get:
+      tags: [Vehicle Models]
+      summary: List model years for a vehicle model
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Vehicle model years.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VehicleModelYearListResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+components:
+  securitySchemes:
+    UserIdHeader:
+      type: apiKey
+      in: header
+      name: x-user-id
+      description: Authenticated user UUID injected by the auth gateway.
+  parameters:
+    Page:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PerPage:
+      name: perPage
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    VehicleId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    DeviceId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    BadRequest:
+      description: Invalid request.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Unauthorized:
+      description: Missing or invalid authentication context.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Resource not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Conflict:
+      description: Request conflicts with current state.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+  schemas:
+    HealthStatus:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          example: ok
+    DependencyHealthError:
+      type: object
+      required: [status, error]
+      properties:
+        status:
+          type: string
+          example: db_unhealthy
+        error:
+          type: string
+    Error:
+      type: object
+      required: [error, message]
+      properties:
+        error:
+          type: string
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          example: validation failed
+        fields:
+          type: array
+          items:
+            $ref: "#/components/schemas/ValidationItem"
+    ValidationItem:
+      type: object
+      required: [field, message]
+      properties:
+        field:
+          type: string
+          example: vin
+        message:
+          type: string
+          example: must be a valid 17-character VIN (I, O and Q are not allowed)
+    PaginationMeta:
+      type: object
+      required: [page, perPage, total, totalPages]
+      properties:
+        page:
+          type: integer
+          example: 1
+        perPage:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 42
+        totalPages:
+          type: integer
+          example: 3
+    CreateDeviceInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          example: torque-device-001
+    CommissionDeviceInput:
+      type: object
+      required: [vehicleId]
+      properties:
+        vehicleId:
+          type: string
+          format: uuid
+    Device:
+      type: object
+      required: [id, name, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        vehicle:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/DeviceVehicle"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    DeviceVehicle:
+      type: object
+      required: [id, vin, plate, color, modelName, year]
+      properties:
+        id:
+          type: string
+          format: uuid
+        vin:
+          type: string
+          minLength: 17
+          maxLength: 17
+        plate:
+          type: string
+        color:
+          type: string
+          example: "#FF0000"
+        modelName:
+          type: string
+        year:
+          type: integer
+        modelUrl:
+          type: string
+          nullable: true
+    CreateDeviceOutput:
+      allOf:
+        - $ref: "#/components/schemas/Device"
+        - type: object
+          required: [certificate, privateKey]
+          properties:
+            certificate:
+              type: string
+            privateKey:
+              type: string
+    DeviceListResult:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Device"
+        meta:
+          $ref: "#/components/schemas/PaginationMeta"
+    CreateVehicleInput:
+      type: object
+      required: [modelYearId, vin, plate, color]
+      properties:
+        customerId:
+          type: string
+          format: uuid
+          nullable: true
+        modelYearId:
+          type: string
+          format: uuid
+        vin:
+          type: string
+          minLength: 17
+          maxLength: 17
+        plate:
+          type: string
+          example: ABC1D23
+        color:
+          type: string
+          example: "#FF0000"
+    UpdateVehicleInput:
+      type: object
+      properties:
+        modelYearId:
+          type: string
+          format: uuid
+        plate:
+          type: string
+          example: ABC1D23
+        color:
+          type: string
+          example: "#FF0000"
+    Vehicle:
+      type: object
+      required:
+        - id
+        - modelId
+        - modelYearId
+        - modelName
+        - year
+        - vin
+        - plate
+        - color
+        - hasActiveDtcs
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+          format: uuid
+          nullable: true
+        modelId:
+          type: string
+          format: uuid
+        modelYearId:
+          type: string
+          format: uuid
+        modelName:
+          type: string
+        year:
+          type: integer
+        modelUrl:
+          type: string
+          nullable: true
+        vin:
+          type: string
+          minLength: 17
+          maxLength: 17
+        plate:
+          type: string
+        color:
+          type: string
+        hasActiveDtcs:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    VehicleListResult:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Vehicle"
+        meta:
+          $ref: "#/components/schemas/PaginationMeta"
+    VehicleModel:
+      type: object
+      required: [id, name, type]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        type:
+          type: string
+          example: suv
+    VehicleModelListResult:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/VehicleModel"
+        meta:
+          $ref: "#/components/schemas/PaginationMeta"
+    VehicleModelYear:
+      type: object
+      required: [id, modelId, year, colors]
+      properties:
+        id:
+          type: string
+          format: uuid
+        modelId:
+          type: string
+          format: uuid
+        year:
+          type: integer
+        modelUrl:
+          type: string
+          nullable: true
+        colors:
+          type: array
+          items:
+            $ref: "#/components/schemas/VehicleModelYearColor"
+    VehicleModelYearColor:
+      type: object
+      required: [id, name, hex]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        hex:
+          type: string
+          example: "#FFFFFF"
+    VehicleModelYearListResult:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/VehicleModelYear"
+        meta:
+          $ref: "#/components/schemas/PaginationMeta"
+    TelemetryEntry:
+      type: object
+      required: [time]
+      properties:
+        time:
+          type: string
+          format: date-time
+        rpm:
+          type: integer
+          nullable: true
+        speed:
+          type: integer
+          nullable: true
+        coolantTemp:
+          type: number
+          format: double
+          nullable: true
+        intakeTemp:
+          type: number
+          format: double
+          nullable: true
+        engineLoad:
+          type: number
+          format: double
+          nullable: true
+        throttlePos:
+          type: number
+          format: double
+          nullable: true
+        fuelLevel:
+          type: number
+          format: double
+          nullable: true
+        fuelTrimShort:
+          type: number
+          format: double
+          nullable: true
+        fuelTrimLong:
+          type: number
+          format: double
+          nullable: true
+        maf:
+          type: number
+          format: double
+          nullable: true
+        batteryVoltage:
+          type: number
+          format: double
+          nullable: true
+    TelemetryList:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/TelemetryEntry"
+        next:
+          type: string
+          format: date-time
+    DTC:
+      type: object
+      required: [code, time, severity, requiresStop]
+      properties:
+        code:
+          type: string
+          example: P0300
+        time:
+          type: string
+          format: date-time
+        description:
+          type: string
+        system:
+          type: string
+          nullable: true
+        severity:
+          type: string
+          example: high
+        requiresStop:
+          type: boolean
+        costMinCents:
+          type: integer
+          nullable: true
+        costMaxCents:
+          type: integer
+          nullable: true
+        timeMin:
+          type: integer
+          nullable: true
+        timeMax:
+          type: integer
+          nullable: true
+    DTCList:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/DTC"

@@ -123,34 +123,41 @@ func main() {
 	)
 
 	health := handler.NewHealthHandler(pool, tsPool)
+	docs := handler.NewDocsHandler()
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger(log))
-	r.Use(middleware.Auth)
 
-	r.Get("/healthz", health.Liveness)
-	r.Get("/readyz", health.Readiness)
+	r.Get("/docs", docs.Redoc)
+	r.Get("/openapi.yaml", docs.OpenAPI)
 
-	r.Route("/devices", func(r chi.Router) {
-		r.Get("/", devices.List)
-		r.Post("/", devices.Create)
-		r.Post("/{id}/commission", devices.Commission)
-		r.Post("/{id}/decommission", devices.Decommission)
-	})
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.Auth)
 
-	r.Route("/vehicles", func(r chi.Router) {
-		r.Get("/", vehicles.List)
-		r.Post("/", vehicles.Create)
-		r.Get("/{id}", vehicles.Get)
-		r.Patch("/{id}", vehicles.Update)
-		r.Delete("/{id}", vehicles.Delete)
-		r.Get("/{id}/telemetry", telemetry.ListTelemetry)
-		r.Get("/{id}/dtcs", telemetry.ListDTCs)
-	})
+		r.Get("/healthz", health.Liveness)
+		r.Get("/readyz", health.Readiness)
 
-	r.Route("/vehicle-models", func(r chi.Router) {
-		r.Get("/", vehicleModels.List)
-		r.Get("/{id}/years", vehicleModels.ListYears)
+		r.Route("/devices", func(r chi.Router) {
+			r.Get("/", devices.List)
+			r.Post("/", devices.Create)
+			r.Post("/{id}/commission", devices.Commission)
+			r.Post("/{id}/decommission", devices.Decommission)
+		})
+
+		r.Route("/vehicles", func(r chi.Router) {
+			r.Get("/", vehicles.List)
+			r.Post("/", vehicles.Create)
+			r.Get("/{id}", vehicles.Get)
+			r.Patch("/{id}", vehicles.Update)
+			r.Delete("/{id}", vehicles.Delete)
+			r.Get("/{id}/telemetry", telemetry.ListTelemetry)
+			r.Get("/{id}/dtcs", telemetry.ListDTCs)
+		})
+
+		r.Route("/vehicle-models", func(r chi.Router) {
+			r.Get("/", vehicleModels.List)
+			r.Get("/{id}/years", vehicleModels.ListYears)
+		})
 	})
 
 	port := mustEnv("PORT")

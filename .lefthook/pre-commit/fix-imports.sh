@@ -7,7 +7,7 @@ if [ -z "$STAGED_FILES" ]; then
   exit 0
 fi
 
-echo "$STAGED_FILES" | xargs go fmt
+echo "$STAGED_FILES" | xargs gofmt -w
 
 # Re-add formatted files
 echo "$STAGED_FILES" | xargs git add

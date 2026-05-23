@@ -10,8 +10,8 @@
 #   3. Wait for step-ca to become healthy
 #   4. Configure step-ca certificate duration limits
 #   5. Copy root CA certificate
-#   6. Create test Kratos identities (admin, support, mechanical)
-#   7. Issue test device certificate and seed in Postgres
+#   6. Issue test device certificate and seed in Postgres
+#   7. Seed reference data
 #
 # Idempotent — safe to run multiple times.
 # Requires: docker, docker compose
@@ -27,7 +27,6 @@ mkdir -p "$CERTS_DIR/device"
 step_exec() { $COMPOSE exec -T step-ca "$@"; }
 psql_exec() { $COMPOSE exec -T postgres psql -U torque -d torque -c "$1"; }
 psql_exec_file() { $COMPOSE exec -T postgres psql -U torque -d torque -f - < "$1"; }
-kratos_exec() { $COMPOSE exec -T kratos "$@"; }
 
 issue_cert() {
   CN="$1"; OUT_CRT="$2"; OUT_KEY="$3"
@@ -41,28 +40,6 @@ issue_cert() {
   $COMPOSE cp step-ca:/tmp/out.key "$OUT_KEY"
 }
 
-create_identity() {
-  EMAIL="$1"; FIRST="$2"; LAST="$3"; ROLE="$4"
-  RESP=$(kratos_exec wget -qO- \
-    --post-data "{
-      \"schema_id\": \"default\",
-      \"traits\": {
-        \"email\": \"$EMAIL\",
-        \"name\": { \"first\": \"$FIRST\", \"last\": \"$LAST\" },
-        \"role\": \"$ROLE\"
-      }
-    }" \
-    --header "Content-Type: application/json" \
-    http://localhost:4434/admin/identities 2>&1) || true
-  if echo "$RESP" | grep -q '"id"'; then
-    echo "  ✓ $EMAIL ($ROLE)"
-  elif echo "$RESP" | grep -q "409"; then
-    echo "  ⏭ $EMAIL ($ROLE) — already exists"
-  else
-    echo "  ✗ $EMAIL FAILED: $RESP"
-  fi
-}
-
 print_step() {
   echo ""
   echo "──────────────────────────────────────────────────"
@@ -73,7 +50,7 @@ print_step() {
 # ──────────────────────────────────────────────────────────────
 print_step "1/7  Starting infrastructure"
 # ──────────────────────────────────────────────────────────────
-$COMPOSE up -d
+$COMPOSE up -d --remove-orphans
 echo "  ✓ services started"
 
 # ──────────────────────────────────────────────────────────────
@@ -138,24 +115,7 @@ $COMPOSE cp step-ca:/home/step/certs/root_ca.crt "$CERTS_DIR/ca.crt"
 echo "  ✓ root cert written to $CERTS_DIR/ca.crt"
 
 # ──────────────────────────────────────────────────────────────
-print_step "6/7  Creating test Kratos identities"
-# ──────────────────────────────────────────────────────────────
-until kratos_exec wget -qO- http://localhost:4434/health/ready > /dev/null 2>&1; do
-  printf "  waiting for kratos...\r"
-  sleep 2
-done
-
-create_identity "admin@torque.dev"      "Admin"      "User" "admin"
-create_identity "support@torque.dev"    "Support"    "User" "support"
-create_identity "mechanical@torque.dev" "Mechanical" "User" "mechanical"
-
-echo "  ✓ identities created:"
-echo "      admin@torque.dev      (role: admin)"
-echo "      support@torque.dev    (role: support)"
-echo "      mechanical@torque.dev (role: mechanical)"
-
-# ──────────────────────────────────────────────────────────────
-print_step "7/7  Issuing test device certificate and seeding Postgres"
+print_step "6/7  Issuing test device certificate and seeding Postgres"
 # ──────────────────────────────────────────────────────────────
 META="$CERTS_DIR/device/meta.json"
 
@@ -194,7 +154,7 @@ else
 fi
 
 # ──────────────────────────────────────────────────────────────
-print_step "8/8  Seeding reference data"
+print_step "7/7  Seeding reference data"
 # ──────────────────────────────────────────────────────────────
 SEEDS_DIR="$REPO_DIR/seeds"
 
@@ -210,11 +170,6 @@ echo "════════════════════════�
 echo " Setup complete!"
 echo "══════════════════════════════════════════════════"
 echo ""
-echo "  Identities:"
-echo "    admin@torque.dev      (role: admin)"
-echo "    support@torque.dev    (role: support)"
-echo "    mechanical@torque.dev (role: mechanical)"
-echo ""
 echo "  Device: TRQ-1 (ID: $DEVICE_ID)"
 echo ""
 echo "  Certs:"
@@ -222,7 +177,5 @@ echo "    CA     → $CERTS_DIR/ca.crt"
 echo "    Device → $CERTS_DIR/device/"
 echo ""
 echo "  Services:"
-echo "    api      → http://localhost:80"
 echo "    minio    → http://localhost:9000 (API) / http://localhost:9001 (Console)"
-echo "    mailhog  → http://localhost:8025"
 echo ""
