@@ -124,6 +124,10 @@ func main() {
 
 	health := handler.NewHealthHandler(pool, tsPool)
 	docs := handler.NewDocsHandler()
+	authConfig, err := middleware.NewAuthConfigFromEnv()
+	if err != nil {
+		log.Fatal("invalid auth bypass configuration", zap.Error(err))
+	}
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger(log))
@@ -132,7 +136,7 @@ func main() {
 	r.Get("/openapi.yaml", docs.OpenAPI)
 
 	r.Group(func(r chi.Router) {
-		r.Use(middleware.Auth)
+		r.Use(middleware.Auth(authConfig))
 
 		r.Get("/healthz", health.Liveness)
 		r.Get("/readyz", health.Readiness)
