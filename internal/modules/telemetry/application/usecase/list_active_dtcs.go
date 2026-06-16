@@ -10,30 +10,22 @@ import (
 )
 
 type ListActiveDTCsUseCase struct {
-	dtcRepo         telemetrydomain.DTCRepository
+	repo            telemetrydomain.StateObservationRepository
 	catalogRepo     telemetrydomain.DTCCatalogRepository
 	vehicleResolver telemetrydomain.VehicleResolver
 }
 
-func NewListActiveDTCs(dtcRepo telemetrydomain.DTCRepository, catalogRepo telemetrydomain.DTCCatalogRepository, vehicleResolver telemetrydomain.VehicleResolver) *ListActiveDTCsUseCase {
-	return &ListActiveDTCsUseCase{dtcRepo: dtcRepo, catalogRepo: catalogRepo, vehicleResolver: vehicleResolver}
+func NewListActiveDTCs(repo telemetrydomain.StateObservationRepository, catalogRepo telemetrydomain.DTCCatalogRepository, vehicleResolver telemetrydomain.VehicleResolver) *ListActiveDTCsUseCase {
+	return &ListActiveDTCsUseCase{repo: repo, catalogRepo: catalogRepo, vehicleResolver: vehicleResolver}
 }
 
 func (uc *ListActiveDTCsUseCase) Execute(ctx context.Context, vehicleID uuid.UUID) (*telemetrydto.DTCListOutput, error) {
-	vin, err := uc.vehicleResolver.GetVINByID(ctx, vehicleID)
-	if err != nil {
-		return nil, apperr.Internal("failed to get vehicle", err)
-	}
-	if vin == "" {
-		return nil, apperr.NotFound("vehicle")
-	}
-
 	modelYearID, err := uc.vehicleResolver.GetModelYearIDByVehicleID(ctx, vehicleID)
 	if err != nil {
 		return nil, apperr.Internal("failed to get vehicle model year", err)
 	}
 
-	active, err := uc.dtcRepo.ListActive(ctx, vin)
+	active, err := uc.repo.ListActiveDTCs(ctx, vehicleID)
 	if err != nil {
 		return nil, apperr.Internal("failed to list active dtcs", err)
 	}

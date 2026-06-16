@@ -1,43 +1,78 @@
 package telemetrydomain
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
 )
 
-type TelemetryEntry struct {
-	Time           time.Time `gorm:"primaryKey;not null"`
-	DeviceID       uuid.UUID `gorm:"type:uuid;primaryKey;not null"`
-	VIN            string    `gorm:"not null"`
-	Lat            *float64
-	Lng            *float64
-	Alt            *float64
-	GPSSpeed       *float64
-	Heading        *float64
-	HDOP           *float64
-	RPM            *int
-	Speed          *int
-	CoolantTemp    *float64
-	IntakeTemp     *float64
-	EngineLoad     *float64
-	ThrottlePos    *float64
-	FuelLevel      *float64
-	FuelTrimShort  *float64
-	FuelTrimLong   *float64
-	MAF            *float64
-	BatteryVoltage *float64
+type VehicleStateObservation struct {
+	MessageID   uuid.UUID
+	DeviceID    uuid.UUID
+	VehicleID   uuid.UUID
+	ObservedAt  time.Time
+	ReceivedAt  time.Time
+	State       VehicleState
+	Observation ObservationMetadata
+	RawPayload  json.RawMessage
 }
 
-func (TelemetryEntry) TableName() string { return "telemetry_entries" }
+type VehicleState struct {
+	Position    *PositionState    `json:"position,omitempty"`
+	Powertrain  *PowertrainState  `json:"powertrain,omitempty"`
+	Fuel        *FuelState        `json:"fuel,omitempty"`
+	Electrical  *ElectricalState  `json:"electrical,omitempty"`
+	Diagnostics *DiagnosticsState `json:"diagnostics,omitempty"`
+}
 
-// DTCEntry records a single DTC status change emitted by a device.
-type DTCEntry struct {
-	Time     time.Time
-	DeviceID uuid.UUID
-	VIN      string
-	Code     string
-	Status   string // "opened" or "closed"
+type PositionState struct {
+	Source  *string  `json:"source,omitempty"`
+	Lat     *float64 `json:"lat,omitempty"`
+	Lng     *float64 `json:"lng,omitempty"`
+	Alt     *float64 `json:"alt,omitempty"`
+	Speed   *float64 `json:"speed,omitempty"`
+	Heading *float64 `json:"heading,omitempty"`
+	HDOP    *float64 `json:"hdop,omitempty"`
+}
+
+type PowertrainState struct {
+	RPM         *int     `json:"rpm,omitempty"`
+	Speed       *int     `json:"speed,omitempty"`
+	EngineLoad  *float64 `json:"engine_load,omitempty"`
+	ThrottlePos *float64 `json:"throttle_pos,omitempty"`
+	CoolantTemp *float64 `json:"coolant_temp,omitempty"`
+	IntakeTemp  *float64 `json:"intake_temp,omitempty"`
+	MAF         *float64 `json:"maf,omitempty"`
+}
+
+type FuelState struct {
+	Level     *float64 `json:"level,omitempty"`
+	TrimShort *float64 `json:"trim_short,omitempty"`
+	TrimLong  *float64 `json:"trim_long,omitempty"`
+}
+
+type ElectricalState struct {
+	BatteryVoltage *float64 `json:"battery_voltage,omitempty"`
+}
+
+type DiagnosticsState struct {
+	OpenDTCs []string `json:"open_dtcs,omitempty"`
+}
+
+type ObservationMetadata struct {
+	Errors []ObservationError `json:"errors,omitempty"`
+}
+
+type ObservationError struct {
+	Block   string  `json:"block"`
+	Code    string  `json:"code"`
+	Message *string `json:"message,omitempty"`
+}
+
+type ActiveDTC struct {
+	Code string
+	Time time.Time
 }
 
 // DTCCatalog is a reference table with standard OBD-II diagnostic trouble codes.

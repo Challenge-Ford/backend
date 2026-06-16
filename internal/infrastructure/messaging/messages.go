@@ -1,32 +1,69 @@
 package messaging
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
-type TelemetryMessage struct {
-	Time           time.Time  `json:"time"`
-	VIN            string     `json:"vin"`
-	Lat            *float64   `json:"lat"`
-	Lng            *float64   `json:"lng"`
-	Alt            *float64   `json:"alt"`
-	GPSSpeed       *float64   `json:"gps_speed"`
-	Heading        *float64   `json:"heading"`
-	HDOP           *float64   `json:"hdop"`
-	RPM            *int       `json:"rpm"`
-	Speed          *int       `json:"speed"`
-	CoolantTemp    *float64   `json:"coolant_temp"`
-	IntakeTemp     *float64   `json:"intake_temp"`
-	EngineLoad     *float64   `json:"engine_load"`
-	ThrottlePos    *float64   `json:"throttle_pos"`
-	FuelLevel      *float64   `json:"fuel_level"`
-	FuelTrimShort  *float64   `json:"fuel_trim_short"`
-	FuelTrimLong   *float64   `json:"fuel_trim_long"`
-	MAF            *float64   `json:"maf"`
-	BatteryVoltage *float64   `json:"battery_voltage"`
+type VehicleStateObservedMessage struct {
+	SchemaVersion int                 `json:"schema_version"`
+	MessageID     string              `json:"message_id"`
+	DeviceID      string              `json:"device_id"`
+	VehicleID     string              `json:"vehicle_id"`
+	ObservedAt    time.Time           `json:"observed_at"`
+	State         VehicleState        `json:"state"`
+	Observation   ObservationMetadata `json:"observation"`
+	RawPayload    json.RawMessage     `json:"-"`
 }
 
-type DTCMessage struct {
-	VIN    string    `json:"vin"`
-	Code   string    `json:"code"`
-	Status string    `json:"status"`
-	Time   time.Time `json:"time"`
+type VehicleState struct {
+	Position    *PositionState    `json:"position,omitempty"`
+	Powertrain  *PowertrainState  `json:"powertrain,omitempty"`
+	Fuel        *FuelState        `json:"fuel,omitempty"`
+	Electrical  *ElectricalState  `json:"electrical,omitempty"`
+	Diagnostics *DiagnosticsState `json:"diagnostics,omitempty"`
+}
+
+type PositionState struct {
+	Source  *string  `json:"source,omitempty"`
+	Lat     *float64 `json:"lat,omitempty"`
+	Lng     *float64 `json:"lng,omitempty"`
+	Alt     *float64 `json:"alt,omitempty"`
+	Speed   *float64 `json:"speed,omitempty"`
+	Heading *float64 `json:"heading,omitempty"`
+	HDOP    *float64 `json:"hdop,omitempty"`
+}
+
+type PowertrainState struct {
+	RPM         *int     `json:"rpm,omitempty"`
+	Speed       *int     `json:"speed,omitempty"`
+	EngineLoad  *float64 `json:"engine_load,omitempty"`
+	ThrottlePos *float64 `json:"throttle_pos,omitempty"`
+	CoolantTemp *float64 `json:"coolant_temp,omitempty"`
+	IntakeTemp  *float64 `json:"intake_temp,omitempty"`
+	MAF         *float64 `json:"maf,omitempty"`
+}
+
+type FuelState struct {
+	Level     *float64 `json:"level,omitempty"`
+	TrimShort *float64 `json:"trim_short,omitempty"`
+	TrimLong  *float64 `json:"trim_long,omitempty"`
+}
+
+type ElectricalState struct {
+	BatteryVoltage *float64 `json:"battery_voltage,omitempty"`
+}
+
+type DiagnosticsState struct {
+	OpenDTCs []string `json:"open_dtcs,omitempty"`
+}
+
+type ObservationMetadata struct {
+	Errors []ObservationError `json:"errors,omitempty"`
+}
+
+type ObservationError struct {
+	Block   string  `json:"block"`
+	Code    string  `json:"code"`
+	Message *string `json:"message,omitempty"`
 }

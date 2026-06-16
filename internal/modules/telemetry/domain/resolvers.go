@@ -6,10 +6,10 @@ import (
 	"github.com/google/uuid"
 )
 
-// DeviceResolver resolves a commissioned device by VIN.
+// DeviceResolver checks whether a device is currently commissioned to a vehicle.
 // Implemented outside this module to keep telemetry isolated.
 type DeviceResolver interface {
-	GetCommissionedByVIN(ctx context.Context, vin string) (*ResolvedDevice, error)
+	IsCommissionedToVehicle(ctx context.Context, deviceID, vehicleID uuid.UUID) (bool, error)
 }
 
 type ResolvedDevice struct {

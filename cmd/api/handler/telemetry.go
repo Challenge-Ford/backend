@@ -14,7 +14,11 @@ import (
 )
 
 type telemetryLister interface {
-	Execute(ctx context.Context, input telemetrydto.ListTelemetryInput) (*telemetrydto.TelemetryListOutput, error)
+	Execute(ctx context.Context, input telemetrydto.ListVehicleStateInput) (*telemetrydto.TelemetryListOutput, error)
+}
+
+type stateLister interface {
+	Execute(ctx context.Context, input telemetrydto.ListVehicleStateInput) (*telemetrydto.VehicleStateListOutput, error)
 }
 
 type dtcLister interface {
@@ -22,19 +26,50 @@ type dtcLister interface {
 }
 
 type TelemetryHandler struct {
-	listTelemetry telemetryLister
-	listDTCs      dtcLister
+	listTelemetry    telemetryLister
+	listVehicleState stateLister
+	listDTCs         dtcLister
 }
 
-func NewTelemetryHandler(listTelemetry telemetryLister, listDTCs dtcLister) *TelemetryHandler {
-	return &TelemetryHandler{listTelemetry: listTelemetry, listDTCs: listDTCs}
+func NewTelemetryHandler(listTelemetry telemetryLister, listVehicleState stateLister, listDTCs dtcLister) *TelemetryHandler {
+	return &TelemetryHandler{listTelemetry: listTelemetry, listVehicleState: listVehicleState, listDTCs: listDTCs}
 }
 
 func (h *TelemetryHandler) ListTelemetry(w http.ResponseWriter, r *http.Request) {
+	input, ok := h.parseListInput(w, r)
+	if !ok {
+		return
+	}
+
+	result, err := h.listTelemetry.Execute(r.Context(), input)
+	if err != nil {
+		httperr.Write(w, err)
+		return
+	}
+
+	httperr.JSON(w, http.StatusOK, result)
+}
+
+func (h *TelemetryHandler) ListVehicleState(w http.ResponseWriter, r *http.Request) {
+	input, ok := h.parseListInput(w, r)
+	if !ok {
+		return
+	}
+
+	result, err := h.listVehicleState.Execute(r.Context(), input)
+	if err != nil {
+		httperr.Write(w, err)
+		return
+	}
+
+	httperr.JSON(w, http.StatusOK, result)
+}
+
+func (h *TelemetryHandler) parseListInput(w http.ResponseWriter, r *http.Request) (telemetrydto.ListVehicleStateInput, bool) {
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		httperr.Write(w, apperr.BadRequest("invalid vehicle id"))
-		return
+		return telemetrydto.ListVehicleStateInput{}, false
 	}
 
 	q := r.URL.Query()
@@ -42,12 +77,12 @@ func (h *TelemetryHandler) ListTelemetry(w http.ResponseWriter, r *http.Request)
 	from, err := parseTime(q.Get("from"))
 	if err != nil {
 		httperr.Write(w, err)
-		return
+		return telemetrydto.ListVehicleStateInput{}, false
 	}
 	to, err := parseTime(q.Get("to"))
 	if err != nil {
 		httperr.Write(w, err)
-		return
+		return telemetrydto.ListVehicleStateInput{}, false
 	}
 
 	var after *time.Time
@@ -55,26 +90,20 @@ func (h *TelemetryHandler) ListTelemetry(w http.ResponseWriter, r *http.Request)
 		t, err := parseTime(raw)
 		if err != nil {
 			httperr.Write(w, err)
-			return
+			return telemetrydto.ListVehicleStateInput{}, false
 		}
 		after = t
 	}
 
 	limit, _ := strconv.Atoi(q.Get("limit"))
 
-	result, err := h.listTelemetry.Execute(r.Context(), telemetrydto.ListTelemetryInput{
+	return telemetrydto.ListVehicleStateInput{
 		VehicleID: id,
 		From:      from,
 		To:        to,
 		Limit:     limit,
 		After:     after,
-	})
-	if err != nil {
-		httperr.Write(w, err)
-		return
-	}
-
-	httperr.JSON(w, http.StatusOK, result)
+	}, true
 }
 
 func (h *TelemetryHandler) ListDTCs(w http.ResponseWriter, r *http.Request) {

@@ -1,3 +1,2 @@
-
-DROP TABLE IF EXISTS dtc_entries;
-DROP TABLE IF EXISTS telemetry_entries;
+DROP TABLE IF EXISTS vehicle_state_observations;
+DROP TABLE IF EXISTS vehicle_state_message_ids;

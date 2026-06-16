@@ -15,5 +15,5 @@ type DeviceResolver interface {
 // TelemetryResolver checks telemetry state outside this module.
 // Implemented outside this module to keep vehicle isolated.
 type TelemetryResolver interface {
-	HasActiveDTCs(ctx context.Context, vins []string) (map[string]bool, error)
+	HasActiveDTCs(ctx context.Context, vehicleIDs []uuid.UUID) (map[uuid.UUID]bool, error)
 }

@@ -1,40 +1,27 @@
+CREATE EXTENSION IF NOT EXISTS timescaledb;
 
-CREATE TABLE IF NOT EXISTS telemetry_entries (
-    time            TIMESTAMPTZ      NOT NULL,
-    device_id       UUID             NOT NULL,
-    vin             TEXT             NOT NULL,
-    lat             DOUBLE PRECISION,
-    lng             DOUBLE PRECISION,
-    alt             DOUBLE PRECISION,
-    gps_speed       DOUBLE PRECISION,
-    heading         DOUBLE PRECISION,
-    hdop            DOUBLE PRECISION,
-    rpm             INTEGER,
-    speed           INTEGER,
-    coolant_temp    DOUBLE PRECISION,
-    intake_temp     DOUBLE PRECISION,
-    engine_load     DOUBLE PRECISION,
-    throttle_pos    DOUBLE PRECISION,
-    fuel_level      DOUBLE PRECISION,
-    fuel_trim_short DOUBLE PRECISION,
-    fuel_trim_long  DOUBLE PRECISION,
-    maf             DOUBLE PRECISION,
-    battery_voltage DOUBLE PRECISION,
-    PRIMARY KEY (time, device_id)
+CREATE TABLE IF NOT EXISTS vehicle_state_message_ids (
+    message_id  UUID        PRIMARY KEY,
+    observed_at TIMESTAMPTZ NOT NULL,
+    received_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-SELECT create_hypertable('telemetry_entries', 'time', if_not_exists => true);
-
-CREATE INDEX IF NOT EXISTS idx_telemetry_entries_vin_time ON telemetry_entries (vin, time DESC);
-
-CREATE TABLE IF NOT EXISTS dtc_entries (
-    time      TIMESTAMPTZ NOT NULL,
-    device_id UUID        NOT NULL,
-    vin       TEXT        NOT NULL,
-    code      TEXT        NOT NULL,
-    status    TEXT        NOT NULL
+CREATE TABLE IF NOT EXISTS vehicle_state_observations (
+    observed_at TIMESTAMPTZ NOT NULL,
+    message_id  UUID        NOT NULL,
+    device_id   UUID        NOT NULL,
+    vehicle_id  UUID        NOT NULL,
+    received_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    state       JSONB       NOT NULL,
+    observation JSONB       NOT NULL DEFAULT '{}'::jsonb,
+    raw_payload JSONB       NOT NULL,
+    PRIMARY KEY (observed_at, message_id)
 );
 
-SELECT create_hypertable('dtc_entries', 'time', if_not_exists => true);
+SELECT create_hypertable('vehicle_state_observations', 'observed_at', if_not_exists => true);
 
-CREATE INDEX IF NOT EXISTS idx_dtc_entries_vin_code_time ON dtc_entries (vin, code, time DESC);
+CREATE INDEX IF NOT EXISTS idx_vehicle_state_observations_vehicle_time
+    ON vehicle_state_observations (vehicle_id, observed_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_vehicle_state_observations_diagnostics
+    ON vehicle_state_observations USING GIN ((state -> 'diagnostics'));

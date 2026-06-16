@@ -9,15 +9,15 @@ import (
 	telemetrydomain "torque/internal/modules/telemetry/domain"
 )
 
-type ListTelemetryUseCase struct {
+type ListVehicleStateUseCase struct {
 	repo telemetrydomain.StateObservationRepository
 }
 
-func NewListTelemetry(repo telemetrydomain.StateObservationRepository) *ListTelemetryUseCase {
-	return &ListTelemetryUseCase{repo: repo}
+func NewListVehicleState(repo telemetrydomain.StateObservationRepository) *ListVehicleStateUseCase {
+	return &ListVehicleStateUseCase{repo: repo}
 }
 
-func (uc *ListTelemetryUseCase) Execute(ctx context.Context, input telemetrydto.ListVehicleStateInput) (*telemetrydto.TelemetryListOutput, error) {
+func (uc *ListVehicleStateUseCase) Execute(ctx context.Context, input telemetrydto.ListVehicleStateInput) (*telemetrydto.VehicleStateListOutput, error) {
 	limit := input.Limit
 	if limit <= 0 || limit > 500 {
 		limit = 100
@@ -25,7 +25,7 @@ func (uc *ListTelemetryUseCase) Execute(ctx context.Context, input telemetrydto.
 
 	entries, err := uc.repo.List(ctx, input.VehicleID, input.From, input.To, limit+1, input.After)
 	if err != nil {
-		return nil, apperr.Internal("failed to list telemetry", err)
+		return nil, apperr.Internal("failed to list vehicle state observations", err)
 	}
 
 	var next *time.Time
@@ -35,9 +35,9 @@ func (uc *ListTelemetryUseCase) Execute(ctx context.Context, input telemetrydto.
 		next = &t
 	}
 
-	out := make([]*telemetrydto.TelemetryOutput, len(entries))
+	out := make([]*telemetrydto.VehicleStateOutput, len(entries))
 	for i, e := range entries {
-		out[i] = telemetrydto.ToTelemetryOutput(e)
+		out[i] = telemetrydto.ToVehicleStateOutput(e)
 	}
-	return &telemetrydto.TelemetryListOutput{Data: out, Next: next}, nil
+	return &telemetrydto.VehicleStateListOutput{Data: out, Next: next}, nil
 }

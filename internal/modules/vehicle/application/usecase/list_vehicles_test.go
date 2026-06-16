@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"torque/internal/core/apperr"
@@ -19,7 +20,7 @@ func TestListVehicles_Execute(t *testing.T) {
 		{ID: vehicledomain.NewVehicleID(), VIN: "1HGBH41JXMN109186", ModelYear: sampleModelYear()},
 		{ID: vehicledomain.NewVehicleID(), VIN: "2T1BURHE0JC034761", ModelYear: sampleModelYear()},
 	}
-	vins := []string{string(vehicles[0].VIN), string(vehicles[1].VIN)}
+	vehicleIDs := []uuid.UUID{uuid.UUID(vehicles[0].ID), uuid.UUID(vehicles[1].ID)}
 
 	t.Run("lists vehicles with DTC flags", func(t *testing.T) {
 		repo := mockvehicle.NewMockRepository(t)
@@ -27,8 +28,8 @@ func TestListVehicles_Execute(t *testing.T) {
 		ctx := authCtx()
 
 		repo.EXPECT().List(ctx, page).Return(vehicles, 2, nil)
-		telemetryResolver.EXPECT().HasActiveDTCs(ctx, vins).
-			Return(map[string]bool{string(vehicles[0].VIN): true, string(vehicles[1].VIN): false}, nil)
+		telemetryResolver.EXPECT().HasActiveDTCs(ctx, vehicleIDs).
+			Return(map[uuid.UUID]bool{uuid.UUID(vehicles[0].ID): true, uuid.UUID(vehicles[1].ID): false}, nil)
 
 		uc := vehicleusecase.NewListVehicles(repo, telemetryResolver)
 		result, err := uc.Execute(ctx, page)
@@ -45,7 +46,7 @@ func TestListVehicles_Execute(t *testing.T) {
 		ctx := authCtx()
 
 		repo.EXPECT().List(ctx, page).Return([]*vehicledomain.Vehicle{}, 0, nil)
-		telemetryResolver.EXPECT().HasActiveDTCs(ctx, []string{}).Return(map[string]bool{}, nil)
+		telemetryResolver.EXPECT().HasActiveDTCs(ctx, []uuid.UUID{}).Return(map[uuid.UUID]bool{}, nil)
 
 		uc := vehicleusecase.NewListVehicles(repo, telemetryResolver)
 		result, err := uc.Execute(ctx, page)
@@ -77,7 +78,7 @@ func TestListVehicles_Execute(t *testing.T) {
 		ctx := authCtx()
 
 		repo.EXPECT().List(ctx, page).Return(vehicles, 2, nil)
-		telemetryResolver.EXPECT().HasActiveDTCs(ctx, vins).Return(nil, assert.AnError)
+		telemetryResolver.EXPECT().HasActiveDTCs(ctx, vehicleIDs).Return(nil, assert.AnError)
 
 		uc := vehicleusecase.NewListVehicles(repo, telemetryResolver)
 		_, err := uc.Execute(ctx, page)

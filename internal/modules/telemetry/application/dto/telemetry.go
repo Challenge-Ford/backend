@@ -1,13 +1,14 @@
 package telemetrydto
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
 	telemetrydomain "torque/internal/modules/telemetry/domain"
 )
 
-type ListTelemetryInput struct {
+type ListVehicleStateInput struct {
 	VehicleID uuid.UUID
 	From      *time.Time
 	To        *time.Time
@@ -15,38 +16,17 @@ type ListTelemetryInput struct {
 	After     *time.Time
 }
 
-type RecordTelemetryInput struct {
-	Time           time.Time
-	VIN            string
-	Lat            *float64
-	Lng            *float64
-	Alt            *float64
-	GPSSpeed       *float64
-	Heading        *float64
-	HDOP           *float64
-	RPM            *int
-	Speed          *int
-	CoolantTemp    *float64
-	IntakeTemp     *float64
-	EngineLoad     *float64
-	ThrottlePos    *float64
-	FuelLevel      *float64
-	FuelTrimShort  *float64
-	FuelTrimLong   *float64
-	MAF            *float64
-	BatteryVoltage *float64
+type RecordVehicleStateInput struct {
+	SchemaVersion int
+	MessageID     uuid.UUID
+	DeviceID      uuid.UUID
+	VehicleID     uuid.UUID
+	ObservedAt    time.Time
+	State         telemetrydomain.VehicleState
+	Observation   telemetrydomain.ObservationMetadata
+	RawPayload    json.RawMessage
 }
 
-type RecordDTCInput struct {
-	VIN    string
-	Code   string
-	Status string // "opened" or "closed"
-	Time   time.Time
-}
-
-// TelemetryOutput contains OBD-II data only.
-// GPS fields (Lat, Lng, Alt, GPSSpeed, Heading, HDOP) are intentionally
-// excluded from the API response for privacy and bandwidth reasons.
 type TelemetryOutput struct {
 	Time           time.Time `json:"time"`
 	RPM            *int      `json:"rpm,omitempty"`
@@ -67,17 +47,14 @@ type TelemetryListOutput struct {
 	Next *time.Time         `json:"next,omitempty"`
 }
 
-type TelemetrySummaryOutput struct {
-	Bucket            time.Time `json:"bucket"`
-	AvgRPM            *float64  `json:"avgRpm,omitempty"`
-	MaxRPM            *float64  `json:"maxRpm,omitempty"`
-	AvgSpeed          *float64  `json:"avgSpeed,omitempty"`
-	MaxSpeed          *float64  `json:"maxSpeed,omitempty"`
-	AvgCoolantTemp    *float64  `json:"avgCoolantTemp,omitempty"`
-	MaxCoolantTemp    *float64  `json:"maxCoolantTemp,omitempty"`
-	AvgEngineLoad     *float64  `json:"avgEngineLoad,omitempty"`
-	AvgMAF            *float64  `json:"avgMaf,omitempty"`
-	AvgBatteryVoltage *float64  `json:"avgBatteryVoltage,omitempty"`
+type VehicleStateOutput struct {
+	MessageID   string                              `json:"messageId"`
+	DeviceID    string                              `json:"deviceId"`
+	VehicleID   string                              `json:"vehicleId"`
+	ObservedAt  time.Time                           `json:"observedAt"`
+	ReceivedAt  time.Time                           `json:"receivedAt"`
+	State       telemetrydomain.VehicleState        `json:"state"`
+	Observation telemetrydomain.ObservationMetadata `json:"observation"`
 }
 
 type DTCOutput struct {
@@ -97,19 +74,41 @@ type DTCListOutput struct {
 	Data []*DTCOutput `json:"data"`
 }
 
-func ToTelemetryOutput(e *telemetrydomain.TelemetryEntry) *TelemetryOutput {
-	return &TelemetryOutput{
-		Time:           e.Time,
-		RPM:            e.RPM,
-		Speed:          e.Speed,
-		CoolantTemp:    e.CoolantTemp,
-		IntakeTemp:     e.IntakeTemp,
-		EngineLoad:     e.EngineLoad,
-		ThrottlePos:    e.ThrottlePos,
-		FuelLevel:      e.FuelLevel,
-		FuelTrimShort:  e.FuelTrimShort,
-		FuelTrimLong:   e.FuelTrimLong,
-		MAF:            e.MAF,
-		BatteryVoltage: e.BatteryVoltage,
+type VehicleStateListOutput struct {
+	Data []*VehicleStateOutput `json:"data"`
+	Next *time.Time            `json:"next,omitempty"`
+}
+
+func ToVehicleStateOutput(e *telemetrydomain.VehicleStateObservation) *VehicleStateOutput {
+	return &VehicleStateOutput{
+		MessageID:   e.MessageID.String(),
+		DeviceID:    e.DeviceID.String(),
+		VehicleID:   e.VehicleID.String(),
+		ObservedAt:  e.ObservedAt,
+		ReceivedAt:  e.ReceivedAt,
+		State:       e.State,
+		Observation: e.Observation,
 	}
+}
+
+func ToTelemetryOutput(e *telemetrydomain.VehicleStateObservation) *TelemetryOutput {
+	out := &TelemetryOutput{Time: e.ObservedAt}
+	if e.State.Powertrain != nil {
+		out.RPM = e.State.Powertrain.RPM
+		out.Speed = e.State.Powertrain.Speed
+		out.CoolantTemp = e.State.Powertrain.CoolantTemp
+		out.IntakeTemp = e.State.Powertrain.IntakeTemp
+		out.EngineLoad = e.State.Powertrain.EngineLoad
+		out.ThrottlePos = e.State.Powertrain.ThrottlePos
+		out.MAF = e.State.Powertrain.MAF
+	}
+	if e.State.Fuel != nil {
+		out.FuelLevel = e.State.Fuel.Level
+		out.FuelTrimShort = e.State.Fuel.TrimShort
+		out.FuelTrimLong = e.State.Fuel.TrimLong
+	}
+	if e.State.Electrical != nil {
+		out.BatteryVoltage = e.State.Electrical.BatteryVoltage
+	}
+	return out
 }

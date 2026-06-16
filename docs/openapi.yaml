@@ -232,8 +232,8 @@ paths:
   /vehicles/{id}/telemetry:
     get:
       tags: [Telemetry]
-      summary: List vehicle telemetry
-      description: Returns OBD-II telemetry fields. GPS fields are stored internally but not returned by this endpoint.
+      summary: List vehicle telemetry observations
+      description: Returns vehicle telemetry observations derived from state snapshots.
       parameters:
         - $ref: "#/components/parameters/VehicleId"
         - name: from
@@ -265,7 +265,7 @@ paths:
             default: 100
       responses:
         "200":
-          description: Telemetry entries.
+          description: Vehicle telemetry observations.
           content:
             application/json:
               schema:

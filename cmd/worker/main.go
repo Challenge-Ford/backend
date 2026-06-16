@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"go.uber.org/zap"
@@ -15,16 +16,16 @@ import (
 	"torque/internal/core/logger"
 	"torque/internal/infrastructure/adapters"
 	"torque/internal/infrastructure/messaging"
+	deviceusecase "torque/internal/modules/device/application/usecase"
+	devicerepository "torque/internal/modules/device/infrastructure/repository"
 	telemetrydto "torque/internal/modules/telemetry/application/dto"
 	telemetryusecase "torque/internal/modules/telemetry/application/usecase"
-	devicerepository "torque/internal/modules/device/infrastructure/repository"
-	deviceusecase "torque/internal/modules/device/application/usecase"
+	telemetrydomain "torque/internal/modules/telemetry/domain"
 	telemetryrepository "torque/internal/modules/telemetry/infrastructure/repository"
 )
 
 const (
-	queueTelemetry = "torque.telemetry"
-	queueDTC       = "torque.dtc"
+	queueVehicleStateObserved = "torque.vehicle.state.observed"
 )
 
 func mustEnv(key string) string {
@@ -72,28 +73,20 @@ func main() {
 	}
 	defer ch.Close()
 
-	for _, q := range []string{queueTelemetry, queueDTC} {
-		if _, err := ch.QueueDeclare(q, true, false, false, false, nil); err != nil {
-			log.Fatal("failed to declare queue", zap.String("queue", q), zap.Error(err))
-		}
+	if _, err := ch.QueueDeclare(queueVehicleStateObserved, true, false, false, false, nil); err != nil {
+		log.Fatal("failed to declare queue", zap.String("queue", queueVehicleStateObserved), zap.Error(err))
 	}
 
 	deviceRepo := devicerepository.NewRepository(pool)
-	telemetryRepo := telemetryrepository.NewPgxRepository(tsPool)
-	dtcRepo := telemetryrepository.NewPgxDTCRepository(tsPool)
+	stateRepo := telemetryrepository.NewPgxStateObservationRepository(tsPool)
 	findCommissionedByVIN := deviceusecase.NewFindCommissionedByVIN(deviceRepo)
 	findDeviceByVehicle := deviceusecase.NewFindDeviceByVehicle(deviceRepo)
 	deviceResolver := adapters.NewDeviceResolver(findCommissionedByVIN, findDeviceByVehicle)
 
-	recordTelemetry := telemetryusecase.NewRecordTelemetry(telemetryRepo, deviceResolver)
-	recordDTC := telemetryusecase.NewRecordDTC(dtcRepo, deviceResolver)
+	recordVehicleState := telemetryusecase.NewRecordVehicleState(stateRepo, deviceResolver)
 
-	go consume(log, ch, queueTelemetry, func(body []byte) error {
-		return handleTelemetry(body, recordTelemetry)
-	})
-
-	go consume(log, ch, queueDTC, func(body []byte) error {
-		return handleDTC(body, recordDTC)
+	go consume(log, ch, queueVehicleStateObserved, func(body []byte) error {
+		return handleVehicleStateObserved(body, recordVehicleState)
 	})
 
 	log.Info("worker started")
@@ -123,49 +116,88 @@ func consume(log *zap.Logger, ch *amqp.Channel, queue string, handle func([]byte
 	}
 }
 
-func handleTelemetry(body []byte, uc *telemetryusecase.RecordTelemetryUseCase) error {
-	var msg messaging.TelemetryMessage
+func handleVehicleStateObserved(body []byte, uc *telemetryusecase.RecordVehicleStateUseCase) error {
+	var msg messaging.VehicleStateObservedMessage
 	if err := json.Unmarshal(body, &msg); err != nil {
-		return fmt.Errorf("unmarshal telemetry: %w", err)
+		return fmt.Errorf("unmarshal vehicle state observed: %w", err)
 	}
-	if msg.VIN == "" {
-		return fmt.Errorf("missing vin")
+	messageID, err := uuid.Parse(msg.MessageID)
+	if err != nil {
+		return fmt.Errorf("invalid message_id: %w", err)
 	}
-	return uc.Execute(context.Background(), telemetrydto.RecordTelemetryInput{
-		Time:           msg.Time,
-		VIN:            msg.VIN,
-		Lat:            msg.Lat,
-		Lng:            msg.Lng,
-		Alt:            msg.Alt,
-		GPSSpeed:       msg.GPSSpeed,
-		Heading:        msg.Heading,
-		HDOP:           msg.HDOP,
-		RPM:            msg.RPM,
-		Speed:          msg.Speed,
-		CoolantTemp:    msg.CoolantTemp,
-		IntakeTemp:     msg.IntakeTemp,
-		EngineLoad:     msg.EngineLoad,
-		ThrottlePos:    msg.ThrottlePos,
-		FuelLevel:      msg.FuelLevel,
-		FuelTrimShort:  msg.FuelTrimShort,
-		FuelTrimLong:   msg.FuelTrimLong,
-		MAF:            msg.MAF,
-		BatteryVoltage: msg.BatteryVoltage,
+	deviceID, err := uuid.Parse(msg.DeviceID)
+	if err != nil {
+		return fmt.Errorf("invalid device_id: %w", err)
+	}
+	vehicleID, err := uuid.Parse(msg.VehicleID)
+	if err != nil {
+		return fmt.Errorf("invalid vehicle_id: %w", err)
+	}
+
+	return uc.Execute(context.Background(), telemetrydto.RecordVehicleStateInput{
+		SchemaVersion: msg.SchemaVersion,
+		MessageID:     messageID,
+		DeviceID:      deviceID,
+		VehicleID:     vehicleID,
+		ObservedAt:    msg.ObservedAt,
+		State: telemetrydomain.VehicleState{
+			Position:    toDomainPosition(msg.State.Position),
+			Powertrain:  toDomainPowertrain(msg.State.Powertrain),
+			Fuel:        toDomainFuel(msg.State.Fuel),
+			Electrical:  toDomainElectrical(msg.State.Electrical),
+			Diagnostics: toDomainDiagnostics(msg.State.Diagnostics),
+		},
+		Observation: toDomainObservation(msg.Observation),
+		RawPayload:  append([]byte(nil), body...),
 	})
 }
 
-func handleDTC(body []byte, uc *telemetryusecase.RecordDTCUseCase) error {
-	var msg messaging.DTCMessage
-	if err := json.Unmarshal(body, &msg); err != nil {
-		return fmt.Errorf("unmarshal dtc: %w", err)
+func toDomainPosition(in *messaging.PositionState) *telemetrydomain.PositionState {
+	if in == nil {
+		return nil
 	}
-	if msg.VIN == "" || msg.Code == "" {
-		return fmt.Errorf("missing vin or code")
+	return &telemetrydomain.PositionState{
+		Source: in.Source, Lat: in.Lat, Lng: in.Lng, Alt: in.Alt,
+		Speed: in.Speed, Heading: in.Heading, HDOP: in.HDOP,
 	}
-	return uc.Execute(context.Background(), telemetrydto.RecordDTCInput{
-		VIN:    msg.VIN,
-		Code:   msg.Code,
-		Status: msg.Status,
-		Time:   msg.Time,
-	})
+}
+
+func toDomainPowertrain(in *messaging.PowertrainState) *telemetrydomain.PowertrainState {
+	if in == nil {
+		return nil
+	}
+	return &telemetrydomain.PowertrainState{
+		RPM: in.RPM, Speed: in.Speed, EngineLoad: in.EngineLoad,
+		ThrottlePos: in.ThrottlePos, CoolantTemp: in.CoolantTemp,
+		IntakeTemp: in.IntakeTemp, MAF: in.MAF,
+	}
+}
+
+func toDomainFuel(in *messaging.FuelState) *telemetrydomain.FuelState {
+	if in == nil {
+		return nil
+	}
+	return &telemetrydomain.FuelState{Level: in.Level, TrimShort: in.TrimShort, TrimLong: in.TrimLong}
+}
+
+func toDomainElectrical(in *messaging.ElectricalState) *telemetrydomain.ElectricalState {
+	if in == nil {
+		return nil
+	}
+	return &telemetrydomain.ElectricalState{BatteryVoltage: in.BatteryVoltage}
+}
+
+func toDomainDiagnostics(in *messaging.DiagnosticsState) *telemetrydomain.DiagnosticsState {
+	if in == nil {
+		return nil
+	}
+	return &telemetrydomain.DiagnosticsState{OpenDTCs: in.OpenDTCs}
+}
+
+func toDomainObservation(in messaging.ObservationMetadata) telemetrydomain.ObservationMetadata {
+	errors := make([]telemetrydomain.ObservationError, len(in.Errors))
+	for i, e := range in.Errors {
+		errors[i] = telemetrydomain.ObservationError{Block: e.Block, Code: e.Code, Message: e.Message}
+	}
+	return telemetrydomain.ObservationMetadata{Errors: errors}
 }

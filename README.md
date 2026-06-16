@@ -24,7 +24,7 @@ Entrypoints executaveis do sistema.
 
 - `cmd/api`: servidor HTTP principal.
 - `cmd/worker`: consumo de mensagens RabbitMQ e escrita em TimescaleDB.
-- `cmd/cli`: comandos para publicar eventos de teste e simular sessao de telemetria.
+- `cmd/cli`: comandos para publicar snapshots de estado e simular sessao de veiculo.
 
 ### `internal/core/`
 
@@ -122,13 +122,13 @@ Responsavel por:
 - comissionar dispositivo em veiculo
 - descomissionar dispositivo
 
-### Telemetria
+### Estado do veiculo
 
 Responsavel por:
 
-- gravar telemetria e DTCs recebidos assincronamente
-- listar telemetria por veiculo
-- listar DTCs ativos
+- gravar snapshots de estado recebidos assincronamente
+- listar observacoes de estado por veiculo
+- listar DTCs ativos a partir do ultimo snapshot de diagnostico
 - consultar TimescaleDB
 
 ## Fluxo de execucao
@@ -176,13 +176,14 @@ Regras:
 
 ## Rodando localmente
 
-Suba a infraestrutura e rode migrations/seeds:
+Suba a infraestrutura compartilhada e rode migrations/seeds:
 
 ```bash
+cd ../backend-local-infra
 ./scripts/setup.sh
 ```
 
-Isso sobe a stack local com `docker compose`, aplica migrations, prepara o Step CA e carrega dados de referencia.
+Isso sobe a stack local com `docker compose`, aplica migrations deste repo, prepara o Step CA, carrega dados de referencia e cria um device local com `device_id`/`vehicle_id` em `../backend-local-infra/certs/device/meta.json`.
 
 Depois, rode a API e o worker separadamente, se necessario:
 

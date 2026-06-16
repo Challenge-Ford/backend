@@ -3,6 +3,7 @@ package vehicleusecase
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"torque/internal/core/apperr"
 	vehicledto "torque/internal/modules/vehicle/application/dto"
 	vehicledomain "torque/internal/modules/vehicle/domain"
@@ -28,13 +29,13 @@ func (uc *GetVehicleUseCase) Execute(ctx context.Context, id vehicledomain.Vehic
 
 	out := vehicledto.ToVehicleOutput(vehicle)
 
-	// dtcMap returns true only for VINs with at least one open DTC.
-	// Missing VINs in the map implicitly mean no active DTCs (false).
-	dtcMap, err := uc.telemetryResolver.HasActiveDTCs(ctx, []string{string(vehicle.VIN)})
+	// dtcMap returns true only for vehicles with at least one open DTC.
+	// Missing vehicle IDs in the map implicitly mean no active DTCs (false).
+	dtcMap, err := uc.telemetryResolver.HasActiveDTCs(ctx, []uuid.UUID{uuid.UUID(vehicle.ID)})
 	if err != nil {
 		return nil, apperr.Internal("failed to check active dtcs", err)
 	}
-	_, hasActive := dtcMap[string(vehicle.VIN)]
+	_, hasActive := dtcMap[uuid.UUID(vehicle.ID)]
 	out.HasActiveDTCs = hasActive
 
 	return out, nil

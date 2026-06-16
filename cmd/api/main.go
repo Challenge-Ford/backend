@@ -72,8 +72,7 @@ func main() {
 	repo := vehiclerepository.NewRepository(pool)
 	modelRepo := vehiclerepository.NewModelRepository(pool)
 	deviceRepo := devicerepository.NewRepository(pool)
-	telemetryRepo := telemetryrepository.NewPgxRepository(tsPool)
-	dtcRepo := telemetryrepository.NewPgxDTCRepository(tsPool)
+	stateRepo := telemetryrepository.NewPgxStateObservationRepository(tsPool)
 	dtcCatalogRepo := telemetryrepository.NewPgxDTCatalogRepository(pool)
 
 	validate := validator.New()
@@ -91,7 +90,7 @@ func main() {
 	existsVehicle := vehicleusecase.NewExistsVehicle(repo)
 	findCommissionedByVIN := deviceusecase.NewFindCommissionedByVIN(deviceRepo)
 	findDeviceByVehicle := deviceusecase.NewFindDeviceByVehicle(deviceRepo)
-	checkActiveDTCs := telemetryusecase.NewCheckActiveDTCs(dtcRepo)
+	checkActiveDTCs := telemetryusecase.NewCheckActiveDTCs(stateRepo)
 
 	vehicleResolver := adapters.NewVehicleResolver(findVehicle, existsVehicle)
 	deviceResolver := adapters.NewDeviceResolver(findCommissionedByVIN, findDeviceByVehicle)
@@ -105,8 +104,9 @@ func main() {
 	)
 
 	telemetry := handler.NewTelemetryHandler(
-		telemetryusecase.NewListTelemetry(telemetryRepo, vehicleResolver),
-		telemetryusecase.NewListActiveDTCs(dtcRepo, dtcCatalogRepo, vehicleResolver),
+		telemetryusecase.NewListTelemetry(stateRepo),
+		telemetryusecase.NewListVehicleState(stateRepo),
+		telemetryusecase.NewListActiveDTCs(stateRepo, dtcCatalogRepo, vehicleResolver),
 	)
 
 	vehicles := handler.NewVehicleHandler(

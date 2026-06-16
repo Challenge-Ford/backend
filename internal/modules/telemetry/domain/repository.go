@@ -7,19 +7,13 @@ import (
 	"github.com/google/uuid"
 )
 
-// Repository is the driven port for persisting telemetry entries.
-type Repository interface {
-	Insert(ctx context.Context, entry *TelemetryEntry) error
-	Latest(ctx context.Context, vin string) (*TelemetryEntry, error)
-	List(ctx context.Context, vin string, from, to *time.Time, limit int, after *time.Time) ([]*TelemetryEntry, error)
-	Summary(ctx context.Context, vin string, from, to time.Time, bucket string) ([]*TelemetrySummary, error)
-}
-
-// DTCRepository is the driven port for persisting DTC entries.
-type DTCRepository interface {
-	Insert(ctx context.Context, entry *DTCEntry) error
-	ListActive(ctx context.Context, vin string) ([]*DTCEntry, error)
-	HasActiveDTCs(ctx context.Context, vins []string) (map[string]bool, error)
+// StateObservationRepository persists and reads vehicle state snapshots.
+type StateObservationRepository interface {
+	Insert(ctx context.Context, observation *VehicleStateObservation) (bool, error)
+	List(ctx context.Context, vehicleID uuid.UUID, from, to *time.Time, limit int, after *time.Time) ([]*VehicleStateObservation, error)
+	Latest(ctx context.Context, vehicleID uuid.UUID) (*VehicleStateObservation, error)
+	ListActiveDTCs(ctx context.Context, vehicleID uuid.UUID) ([]*ActiveDTC, error)
+	HasActiveDTCs(ctx context.Context, vehicleIDs []uuid.UUID) (map[uuid.UUID]bool, error)
 }
 
 // DTCCatalogRepository is the driven port for reading diagnostic trouble code reference data.

@@ -3,10 +3,12 @@ package adapters
 import (
 	"context"
 	"fmt"
+
+	"github.com/google/uuid"
 )
 
 type checkActiveDTCs interface {
-	Execute(ctx context.Context, vins []string) (map[string]bool, error)
+	Execute(ctx context.Context, vehicleIDs []uuid.UUID) (map[uuid.UUID]bool, error)
 }
 
 type TelemetryResolverAdapter struct {
@@ -17,8 +19,8 @@ func NewTelemetryResolver(checkActiveDTCs checkActiveDTCs) *TelemetryResolverAda
 	return &TelemetryResolverAdapter{checkActiveDTCs: checkActiveDTCs}
 }
 
-func (a *TelemetryResolverAdapter) HasActiveDTCs(ctx context.Context, vins []string) (map[string]bool, error) {
-	result, err := a.checkActiveDTCs.Execute(ctx, vins)
+func (a *TelemetryResolverAdapter) HasActiveDTCs(ctx context.Context, vehicleIDs []uuid.UUID) (map[uuid.UUID]bool, error) {
+	result, err := a.checkActiveDTCs.Execute(ctx, vehicleIDs)
 	if err != nil {
 		return nil, fmt.Errorf("telemetry resolver: %w", err)
 	}

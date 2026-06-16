@@ -3,6 +3,7 @@ package vehicleusecase
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"torque/internal/core/apperr"
 	"torque/internal/core/pagination"
 	vehicledto "torque/internal/modules/vehicle/application/dto"
@@ -26,12 +27,12 @@ func (uc *ListVehiclesUseCase) Execute(ctx context.Context, page pagination.Page
 		return nil, apperr.Internal("failed to list vehicles", err)
 	}
 
-	vins := make([]string, len(vehicles))
+	vehicleIDs := make([]uuid.UUID, len(vehicles))
 	for i, v := range vehicles {
-		vins[i] = string(v.VIN)
+		vehicleIDs[i] = uuid.UUID(v.ID)
 	}
 
-	dtcMap, err := uc.telemetryResolver.HasActiveDTCs(ctx, vins)
+	dtcMap, err := uc.telemetryResolver.HasActiveDTCs(ctx, vehicleIDs)
 	if err != nil {
 		return nil, apperr.Internal("failed to check active dtcs", err)
 	}
@@ -39,7 +40,7 @@ func (uc *ListVehiclesUseCase) Execute(ctx context.Context, page pagination.Page
 	output := make([]*vehicledto.VehicleOutput, len(vehicles))
 	for i, v := range vehicles {
 		out := vehicledto.ToVehicleOutput(v)
-		out.HasActiveDTCs = dtcMap[string(v.VIN)]
+		out.HasActiveDTCs = dtcMap[uuid.UUID(v.ID)]
 		output[i] = out
 	}
 

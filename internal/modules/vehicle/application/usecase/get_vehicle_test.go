@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"torque/internal/core/apperr"
@@ -27,8 +28,8 @@ func TestGetVehicle_Execute(t *testing.T) {
 		ctx := authCtx()
 
 		repo.EXPECT().GetByID(ctx, vehicleID).Return(existing, nil)
-		telemetryResolver.EXPECT().HasActiveDTCs(ctx, []string{string(existing.VIN)}).
-			Return(map[string]bool{string(existing.VIN): true}, nil)
+		telemetryResolver.EXPECT().HasActiveDTCs(ctx, []uuid.UUID{uuid.UUID(existing.ID)}).
+			Return(map[uuid.UUID]bool{uuid.UUID(existing.ID): true}, nil)
 
 		uc := vehicleusecase.NewGetVehicle(repo, telemetryResolver)
 		out, err := uc.Execute(ctx, vehicleID)
@@ -44,8 +45,8 @@ func TestGetVehicle_Execute(t *testing.T) {
 		ctx := authCtx()
 
 		repo.EXPECT().GetByID(ctx, vehicleID).Return(existing, nil)
-		telemetryResolver.EXPECT().HasActiveDTCs(ctx, []string{string(existing.VIN)}).
-			Return(map[string]bool{}, nil)
+		telemetryResolver.EXPECT().HasActiveDTCs(ctx, []uuid.UUID{uuid.UUID(existing.ID)}).
+			Return(map[uuid.UUID]bool{}, nil)
 
 		uc := vehicleusecase.NewGetVehicle(repo, telemetryResolver)
 		out, err := uc.Execute(ctx, vehicleID)
@@ -92,7 +93,7 @@ func TestGetVehicle_Execute(t *testing.T) {
 		ctx := authCtx()
 
 		repo.EXPECT().GetByID(ctx, vehicleID).Return(existing, nil)
-		telemetryResolver.EXPECT().HasActiveDTCs(ctx, []string{string(existing.VIN)}).
+		telemetryResolver.EXPECT().HasActiveDTCs(ctx, []uuid.UUID{uuid.UUID(existing.ID)}).
 			Return(nil, assert.AnError)
 
 		uc := vehicleusecase.NewGetVehicle(repo, telemetryResolver)

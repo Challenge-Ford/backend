@@ -44,6 +44,21 @@ func (a *DeviceResolverAdapter) GetCommissionedByVIN(ctx context.Context, vin st
 	return &telemetrydomain.ResolvedDevice{ID: id, VIN: vin}, nil
 }
 
+func (a *DeviceResolverAdapter) IsCommissionedToVehicle(ctx context.Context, deviceID, vehicleID uuid.UUID) (bool, error) {
+	out, err := a.findDeviceByVehicle.Execute(ctx, vehicleID)
+	if err != nil {
+		return false, fmt.Errorf("device resolver: %w", err)
+	}
+	if out == nil {
+		return false, nil
+	}
+	id, err := uuid.Parse(out.ID)
+	if err != nil {
+		return false, fmt.Errorf("device resolver: invalid device id: %w", err)
+	}
+	return id == deviceID, nil
+}
+
 func (a *DeviceResolverAdapter) HasCommissioned(ctx context.Context, vehicleID uuid.UUID) (bool, error) {
 	out, err := a.findDeviceByVehicle.Execute(ctx, vehicleID)
 	if err != nil {
