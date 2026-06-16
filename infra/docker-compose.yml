@@ -1,6 +1,35 @@
 name: torque
 
 services:
+  traefik:
+    image: traefik:v3.3
+    restart: unless-stopped
+    command:
+      - --providers.file.filename=/etc/traefik/dynamic.yml
+      - --entrypoints.web.address=:80
+    ports:
+      - "80:80"
+    volumes:
+      - ./traefik:/etc/traefik:ro
+    networks:
+      - torque
+    depends_on:
+      - oathkeeper
+
+  oathkeeper:
+    image: oryd/oathkeeper:v0.40.8
+    restart: unless-stopped
+    command: serve --config /etc/config/oathkeeper/oathkeeper.yml
+    volumes:
+      - ./oathkeeper:/etc/config/oathkeeper:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - torque
+    depends_on:
+      kratos:
+        condition: service_started
+
   timescaledb:
     image: timescale/timescaledb:latest-pg17
     restart: unless-stopped
@@ -44,6 +73,57 @@ services:
       - postgres-data:/var/lib/postgresql/data:rw
     networks:
       - torque
+
+  kratos-postgres:
+    image: postgres:17.2-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: kratos
+      POSTGRES_PASSWORD: kratos
+      POSTGRES_DB: kratos
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -d kratos -U kratos
+      interval: 10s
+      timeout: 30s
+      retries: 10
+      start_period: 20s
+    volumes:
+      - kratos-postgres-data:/var/lib/postgresql/data:rw
+    networks:
+      - torque
+
+  kratos-migrate:
+    image: oryd/kratos:v26.2.0
+    restart: on-failure
+    command: -c /etc/config/kratos/kratos.yml migrate sql -e --yes
+    environment:
+      DSN: postgres://kratos:kratos@kratos-postgres:5432/kratos?sslmode=disable
+    volumes:
+      - ./kratos:/etc/config/kratos:ro
+    networks:
+      - torque
+    depends_on:
+      kratos-postgres:
+        condition: service_healthy
+
+  kratos:
+    image: oryd/kratos:v26.2.0
+    restart: unless-stopped
+    command: serve -c /etc/config/kratos/kratos.yml --dev --watch-courier
+    environment:
+      DSN: postgres://kratos:kratos@kratos-postgres:5432/kratos?sslmode=disable
+      LOG_LEVEL: info
+    volumes:
+      - ./kratos:/etc/config/kratos:ro
+    networks:
+      - torque
+    depends_on:
+      kratos-migrate:
+        condition: service_completed_successfully
+      kratos-postgres:
+        condition: service_healthy
 
   minio:
     image: minio/minio:latest
@@ -134,6 +214,7 @@ networks:
 
 volumes:
   postgres-data:
+  kratos-postgres-data:
   timescaledb-data:
   minio-data:
   rabbitmq-data:

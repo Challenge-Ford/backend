@@ -89,8 +89,10 @@ Servicos ativos no modo dev atual:
 - `step-ca`
 - `minio`
 - `mailhog`
-
-As pastas `infra/kratos`, `infra/oathkeeper` e afins foram usadas numa stack anterior de auth, mas nao fazem parte do fluxo local atual.
+- `traefik`
+- `oathkeeper`
+- `kratos`
+- `kratos-postgres`
 
 ### `docs/`
 
@@ -193,4 +195,4 @@ go run ./cmd/worker
 
 - `mocks/` contem mocks usados pelos testes unitarios.
 - `docs/openapi.yaml` deve ser mantido junto com as mudancas de contrato da API.
-- o compose de dev foi simplificado para o fluxo atual; auth gateway nao sobe mais por padrao.
+- o compose de dev sobe Traefik, Oathkeeper e Kratos para o fluxo local de autenticacao.

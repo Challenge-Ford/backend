@@ -10,8 +10,9 @@
 #   3. Wait for step-ca to become healthy
 #   4. Configure step-ca certificate duration limits
 #   5. Copy root CA certificate
-#   6. Issue test device certificate and seed in Postgres
-#   7. Seed reference data
+#   6. Create demo Kratos identity
+#   7. Issue test device certificate and seed in Postgres
+#   8. Seed reference data
 #
 # Idempotent — safe to run multiple times.
 # Requires: docker, docker compose
@@ -27,6 +28,7 @@ mkdir -p "$CERTS_DIR/device"
 step_exec() { $COMPOSE exec -T step-ca "$@"; }
 psql_exec() { $COMPOSE exec -T postgres psql -U torque -d torque -c "$1"; }
 psql_exec_file() { $COMPOSE exec -T postgres psql -U torque -d torque -f - < "$1"; }
+kratos_exec() { $COMPOSE exec -T kratos "$@"; }
 
 issue_cert() {
   CN="$1"; OUT_CRT="$2"; OUT_KEY="$3"
@@ -40,6 +42,27 @@ issue_cert() {
   $COMPOSE cp step-ca:/tmp/out.key "$OUT_KEY"
 }
 
+create_demo_identity() {
+  RESP=$(kratos_exec wget -qO- \
+    --post-data '{
+      "schema_id": "default",
+      "traits": {
+        "email": "demo@torque.dev",
+        "name": { "first": "Demo", "last": "User" },
+        "role": "admin"
+      }
+    }' \
+    --header "Content-Type: application/json" \
+    http://localhost:4434/admin/identities 2>&1) || true
+  if echo "$RESP" | grep -q '"id"'; then
+    echo "  ✓ demo@torque.dev (admin)"
+  elif echo "$RESP" | grep -q "409"; then
+    echo "  ⏭ demo@torque.dev (admin) — already exists"
+  else
+    echo "  ✗ demo@torque.dev FAILED: $RESP"
+  fi
+}
+
 print_step() {
   echo ""
   echo "──────────────────────────────────────────────────"
@@ -48,13 +71,13 @@ print_step() {
 }
 
 # ──────────────────────────────────────────────────────────────
-print_step "1/7  Starting infrastructure"
+print_step "1/8  Starting infrastructure"
 # ──────────────────────────────────────────────────────────────
 $COMPOSE up -d --remove-orphans
 echo "  ✓ services started"
 
 # ──────────────────────────────────────────────────────────────
-print_step "2/7  Running database migrations"
+print_step "2/8  Running database migrations"
 # ──────────────────────────────────────────────────────────────
 until $COMPOSE exec -T postgres pg_isready -U torque > /dev/null 2>&1; do
   printf "  waiting for postgres...\r"
@@ -78,7 +101,7 @@ $MIGRATE_TS up 2>&1 | while IFS= read -r line; do echo "  $line"; done
 echo "  ✓ timescaledb migrations complete"
 
 # ──────────────────────────────────────────────────────────────
-print_step "3/7  Waiting for step-ca to become healthy"
+print_step "3/8  Waiting for step-ca to become healthy"
 # ──────────────────────────────────────────────────────────────
 until step_exec step ca health \
   --ca-url=https://step-ca:9000 \
@@ -89,7 +112,7 @@ done
 echo "  ✓ step-ca is healthy"
 
 # ──────────────────────────────────────────────────────────────
-print_step "4/7  Configuring step-ca certificate duration limits"
+print_step "4/8  Configuring step-ca certificate duration limits"
 # ──────────────────────────────────────────────────────────────
 step_exec sh -c "
   jq '.authority.claims = {
@@ -109,13 +132,23 @@ done
 echo "  ✓ certificate duration configured (max: 8760h)"
 
 # ──────────────────────────────────────────────────────────────
-print_step "5/7  Copying root CA certificate"
+print_step "5/8  Copying root CA certificate"
 # ──────────────────────────────────────────────────────────────
 $COMPOSE cp step-ca:/home/step/certs/root_ca.crt "$CERTS_DIR/ca.crt"
 echo "  ✓ root cert written to $CERTS_DIR/ca.crt"
 
 # ──────────────────────────────────────────────────────────────
-print_step "6/7  Issuing test device certificate and seeding Postgres"
+print_step "6/8  Creating demo Kratos identity"
+# ──────────────────────────────────────────────────────────────
+until kratos_exec wget -qO- http://localhost:4434/health/ready > /dev/null 2>&1; do
+  printf "  waiting for kratos...\r"
+  sleep 2
+done
+
+create_demo_identity
+
+# ──────────────────────────────────────────────────────────────
+print_step "7/8  Issuing test device certificate and seeding Postgres"
 # ──────────────────────────────────────────────────────────────
 META="$CERTS_DIR/device/meta.json"
 
@@ -154,7 +187,7 @@ else
 fi
 
 # ──────────────────────────────────────────────────────────────
-print_step "7/7  Seeding reference data"
+print_step "8/8  Seeding reference data"
 # ──────────────────────────────────────────────────────────────
 SEEDS_DIR="$REPO_DIR/seeds"
 
@@ -170,6 +203,9 @@ echo "════════════════════════�
 echo " Setup complete!"
 echo "══════════════════════════════════════════════════"
 echo ""
+echo "  Identity:"
+echo "    demo@torque.dev (role: admin)"
+echo ""
 echo "  Device: TRQ-1 (ID: $DEVICE_ID)"
 echo ""
 echo "  Certs:"
@@ -178,4 +214,5 @@ echo "    Device → $CERTS_DIR/device/"
 echo ""
 echo "  Services:"
 echo "    minio    → http://localhost:9000 (API) / http://localhost:9001 (Console)"
+echo "    mailhog  → http://localhost:8025"
 echo ""

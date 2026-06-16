@@ -1,0 +1,75 @@
+version: v0.13.0
+
+serve:
+  public:
+    base_url: http://localhost/auth
+
+selfservice:
+  default_browser_return_url: http://localhost:5173/
+  allowed_return_urls:
+    - http://localhost:5173
+
+  methods:
+    password:
+      enabled: false
+    code:
+      enabled: true
+      passwordless_enabled: true
+
+  flows:
+    error:
+      ui_url: http://localhost:5173/error
+    settings:
+      ui_url: http://localhost:5173/settings
+      privileged_session_max_age: 15m
+    recovery:
+      enabled: false
+    verification:
+      enabled: false
+    logout:
+      after:
+        default_browser_return_url: http://localhost:5173/login
+    login:
+      ui_url: http://localhost:5173/login
+      lifespan: 10m
+    registration:
+      enabled: false
+      ui_url: http://localhost:5173/registration
+      lifespan: 10m
+      after:
+        code:
+          hooks:
+            - hook: session
+
+session:
+  cookie:
+    name: torque_session
+
+secrets:
+  cookie:
+    - PLEASE-CHANGE-ME-I-AM-VERY-INSECURE
+  cipher:
+    - 32-LONG-SECRET-NOT-SECURE-AT-ALL
+
+identity:
+  default_schema_id: default
+  schemas:
+    - id: default
+      url: file:///etc/config/kratos/identity.schema.json
+
+courier:
+  smtp:
+    connection_uri: smtp://mailhog:1025/?skip_ssl_verify=true&disable_starttls=true
+    from_address: noreply@localhost
+    from_name: Torque
+  templates:
+    login_code:
+      valid:
+        email:
+          subject: file:///etc/config/kratos/templates/login_code/valid/email.subject.gotmpl
+          body:
+            html: file:///etc/config/kratos/templates/login_code/valid/email.body.html.gotmpl
+            plaintext: file:///etc/config/kratos/templates/login_code/valid/email.body.plaintext.gotmpl
+
+feature_flags:
+  use_continue_with_transitions: true
