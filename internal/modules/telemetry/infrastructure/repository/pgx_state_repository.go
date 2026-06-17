@@ -127,6 +127,25 @@ func (r *PgxStateObservationRepository) Latest(ctx context.Context, vehicleID uu
 	return e, nil
 }
 
+func (r *PgxStateObservationRepository) LatestPosition(ctx context.Context, vehicleID uuid.UUID) (*telemetrydomain.VehicleStateObservation, error) {
+	row := r.pool.QueryRow(ctx, `
+		SELECT observed_at, message_id, device_id, vehicle_id, received_at, state, observation, raw_payload
+		FROM vehicle_state_observations
+		WHERE vehicle_id = $1
+		  AND state ? 'position'
+		ORDER BY observed_at DESC
+		LIMIT 1`, vehicleID)
+
+	e, err := scanObservation(row)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return e, nil
+}
+
 func (r *PgxStateObservationRepository) ListActiveDTCs(ctx context.Context, vehicleID uuid.UUID) ([]*telemetrydomain.ActiveDTC, error) {
 	row := r.pool.QueryRow(ctx, `
 		SELECT observed_at, state

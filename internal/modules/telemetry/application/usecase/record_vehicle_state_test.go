@@ -2,6 +2,7 @@ package telemetryusecase_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 	"time"
@@ -119,5 +120,31 @@ func TestRecordVehicleState_Execute(t *testing.T) {
 		var appErr *apperr.Error
 		require.True(t, errors.As(err, &appErr))
 		assert.Equal(t, apperr.KindBadRequest, appErr.Kind)
+	})
+
+	t.Run("preserves observed empty diagnostics", func(t *testing.T) {
+		repo := mocktelemetry.NewMockStateObservationRepository(t)
+		resolver := mocktelemetry.NewMockDeviceResolver(t)
+		input := telemetrydto.RecordVehicleStateInput{
+			SchemaVersion: 1,
+			MessageID:     messageID,
+			DeviceID:      deviceID,
+			VehicleID:     vehicleID,
+			ObservedAt:    observedAt,
+			State: telemetrydomain.VehicleState{
+				Diagnostics: &telemetrydomain.DiagnosticsState{OpenDTCs: []string{}},
+			},
+		}
+
+		resolver.EXPECT().IsCommissionedToVehicle(ctx, deviceID, vehicleID).Return(true, nil)
+		repo.EXPECT().Insert(ctx, mock.MatchedBy(func(e *telemetrydomain.VehicleStateObservation) bool {
+			raw, err := json.Marshal(e.State)
+			return err == nil && string(raw) == `{"diagnostics":{"open_dtcs":[]}}`
+		})).Return(true, nil)
+
+		uc := telemetryusecase.NewRecordVehicleState(repo, resolver)
+		err := uc.Execute(ctx, input)
+
+		require.NoError(t, err)
 	})
 }

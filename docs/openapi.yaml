@@ -295,6 +295,26 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
+  /vehicles/{id}/location:
+    get:
+      tags: [Telemetry]
+      summary: Get latest vehicle location
+      description: Returns the latest state snapshot that contains a position block.
+      parameters:
+        - $ref: "#/components/parameters/VehicleId"
+      responses:
+        "200":
+          description: Latest vehicle location.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Location"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /vehicle-models:
     get:
       tags: [Vehicle Models]
@@ -744,6 +764,46 @@ components:
         next:
           type: string
           format: date-time
+    Location:
+      type: object
+      required: [time, deviceId]
+      properties:
+        time:
+          type: string
+          format: date-time
+        source:
+          type: string
+          nullable: true
+          example: gps
+        lat:
+          type: number
+          format: double
+          nullable: true
+          example: -23.5505
+        lng:
+          type: number
+          format: double
+          nullable: true
+          example: -46.6333
+        alt:
+          type: number
+          format: double
+          nullable: true
+        speed:
+          type: number
+          format: double
+          nullable: true
+        heading:
+          type: number
+          format: double
+          nullable: true
+        hdop:
+          type: number
+          format: double
+          nullable: true
+        deviceId:
+          type: string
+          format: uuid
     DTC:
       type: object
       required: [code, time, severity, requiresStop]

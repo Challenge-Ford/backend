@@ -107,6 +107,7 @@ func main() {
 		telemetryusecase.NewListTelemetry(stateRepo),
 		telemetryusecase.NewListVehicleState(stateRepo),
 		telemetryusecase.NewListActiveDTCs(stateRepo, dtcCatalogRepo, vehicleResolver),
+		telemetryusecase.NewGetLatestLocation(stateRepo),
 	)
 
 	vehicles := handler.NewVehicleHandler(
@@ -156,6 +157,7 @@ func main() {
 			r.Delete("/{id}", vehicles.Delete)
 			r.Get("/{id}/telemetry", telemetry.ListTelemetry)
 			r.Get("/{id}/dtcs", telemetry.ListDTCs)
+			r.Get("/{id}/location", telemetry.GetLocation)
 		})
 
 		r.Route("/vehicle-models", func(r chi.Router) {

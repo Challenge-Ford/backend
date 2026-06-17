@@ -47,6 +47,18 @@ type TelemetryListOutput struct {
 	Next *time.Time         `json:"next,omitempty"`
 }
 
+type LocationOutput struct {
+	Time     time.Time `json:"time"`
+	Source   *string   `json:"source,omitempty"`
+	Lat      *float64  `json:"lat,omitempty"`
+	Lng      *float64  `json:"lng,omitempty"`
+	Alt      *float64  `json:"alt,omitempty"`
+	Speed    *float64  `json:"speed,omitempty"`
+	Heading  *float64  `json:"heading,omitempty"`
+	HDOP     *float64  `json:"hdop,omitempty"`
+	DeviceID string    `json:"deviceId"`
+}
+
 type VehicleStateOutput struct {
 	MessageID   string                              `json:"messageId"`
 	DeviceID    string                              `json:"deviceId"`
@@ -109,6 +121,23 @@ func ToTelemetryOutput(e *telemetrydomain.VehicleStateObservation) *TelemetryOut
 	}
 	if e.State.Electrical != nil {
 		out.BatteryVoltage = e.State.Electrical.BatteryVoltage
+	}
+	return out
+}
+
+func ToLocationOutput(e *telemetrydomain.VehicleStateObservation) *LocationOutput {
+	out := &LocationOutput{
+		Time:     e.ObservedAt,
+		DeviceID: e.DeviceID.String(),
+	}
+	if e.State.Position != nil {
+		out.Source = e.State.Position.Source
+		out.Lat = e.State.Position.Lat
+		out.Lng = e.State.Position.Lng
+		out.Alt = e.State.Position.Alt
+		out.Speed = e.State.Position.Speed
+		out.Heading = e.State.Position.Heading
+		out.HDOP = e.State.Position.HDOP
 	}
 	return out
 }

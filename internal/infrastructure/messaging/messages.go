@@ -55,7 +55,7 @@ type ElectricalState struct {
 }
 
 type DiagnosticsState struct {
-	OpenDTCs []string `json:"open_dtcs,omitempty"`
+	OpenDTCs []string `json:"open_dtcs"`
 }
 
 type ObservationMetadata struct {

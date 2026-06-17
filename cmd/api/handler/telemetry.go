@@ -25,14 +25,19 @@ type dtcLister interface {
 	Execute(ctx context.Context, vehicleID uuid.UUID) (*telemetrydto.DTCListOutput, error)
 }
 
+type locationGetter interface {
+	Execute(ctx context.Context, vehicleID uuid.UUID) (*telemetrydto.LocationOutput, error)
+}
+
 type TelemetryHandler struct {
 	listTelemetry    telemetryLister
 	listVehicleState stateLister
 	listDTCs         dtcLister
+	getLocation      locationGetter
 }
 
-func NewTelemetryHandler(listTelemetry telemetryLister, listVehicleState stateLister, listDTCs dtcLister) *TelemetryHandler {
-	return &TelemetryHandler{listTelemetry: listTelemetry, listVehicleState: listVehicleState, listDTCs: listDTCs}
+func NewTelemetryHandler(listTelemetry telemetryLister, listVehicleState stateLister, listDTCs dtcLister, getLocation locationGetter) *TelemetryHandler {
+	return &TelemetryHandler{listTelemetry: listTelemetry, listVehicleState: listVehicleState, listDTCs: listDTCs, getLocation: getLocation}
 }
 
 func (h *TelemetryHandler) ListTelemetry(w http.ResponseWriter, r *http.Request) {
@@ -114,6 +119,22 @@ func (h *TelemetryHandler) ListDTCs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result, err := h.listDTCs.Execute(r.Context(), id)
+	if err != nil {
+		httperr.Write(w, err)
+		return
+	}
+
+	httperr.JSON(w, http.StatusOK, result)
+}
+
+func (h *TelemetryHandler) GetLocation(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httperr.Write(w, apperr.BadRequest("invalid vehicle id"))
+		return
+	}
+
+	result, err := h.getLocation.Execute(r.Context(), id)
 	if err != nil {
 		httperr.Write(w, err)
 		return
