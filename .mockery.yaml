@@ -17,8 +17,7 @@ packages:
       dir: "mocks/telemetry/domain"
       outpkg: "mocktelemetry"
     interfaces:
-      Repository:
-      DTCRepository:
+      StateObservationRepository:
       DTCCatalogRepository:
       DeviceResolver:
       VehicleResolver:
