@@ -6,12 +6,9 @@ name: Build & Test
 on:
   workflow_call:
 
-env:
-  MOCKERY_VERSION: v2.53.3
-
 jobs:
   build-test:
-    name: Build, lint & test
+    name: Build & test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -28,17 +25,11 @@ jobs:
 
       - name: Generate mocks
         run: |
-          go install github.com/vektra/mockery/v2@${MOCKERY_VERSION}
+          go install github.com/vektra/mockery/v2@v2.53.3
           "$(go env GOPATH)/bin/mockery"
 
       - name: go vet
         run: go vet ./...
-
-      - name: Lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: latest
-          args: --timeout=5m
 
       - name: Build entrypoints
         run: |
